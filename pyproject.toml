@@ -1,0 +1,32 @@
+[project]
+name = "tahini"
+version = "0.1.0"
+description = "AI-powered exam platform that enables digital test creation, automated grading, and personalized feedback for educators and learners."
+authors = [
+    {name = "Esaius2058",email = "wabwirewild@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+  "SQLAlchemy>=2.0",
+  "psycopg2-binary>=2.9",
+  "alembic>=1.13",
+  "python-dotenv>=1.0",
+  "pgvector>=0.2.4",
+]
+
+[tool.setuptools]
+package-dir = {"" = "backend/src"}
+
+[tool.setuptools.packages.find]
+where = ["backend/src"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
