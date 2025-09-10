@@ -1,13 +1,23 @@
 import os, sys
+from pathlib import Path
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parents[1]
+print("BASE_DIR", BASE_DIR)
+load_dotenv(BASE_DIR / ".env")
+
+sys.path.append(str(BASE_DIR))
+
+from src.db.base import Base
+from src.db.models import models
+
 config = context.config
 
 db_url = os.getenv("DATABASE_URL")
+print(db_url)
 if not db_url:
     raise RuntimeError("DATABASE_URL not set in .env")
 
@@ -16,9 +26,9 @@ config.set_main_option("sqlalchemy.url", db_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name) # Interpret the config file for Python logging
 
-from backend.src.db.base import Base
-target_metadata = Base.metadata
 
+target_metadata = Base.metadata
+print("Metadata: ", target_metadata.tables.keys())
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
