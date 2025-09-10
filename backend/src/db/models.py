@@ -1,9 +1,20 @@
-from sqlalchemy import Column, String, Text, TIMESTAMP, ForeignKey, Float, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy import Column, String,Enum, Text, TIMESTAMP, ForeignKey, Float, func
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship, sessionmaker
-from src.db.base import Base, engine
+from pathlib import Path
+from dotenv import load_dotenv
+import sys
 import uuid
+
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+print("BASE_DIR", BASE_DIR)
+load_dotenv(BASE_DIR / ".env")
+
+sys.path.append(str(BASE_DIR))
+
+from src.db.base import Base, engine
 
 class Exam(Base):
     __tablename__ = "exam"
@@ -54,6 +65,8 @@ class Submission(Base):
 class User(Base):
     __tablename__ = "user"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
     type = Column(String)
 
     submissions = relationship("Submission", back_populates="user")
@@ -62,7 +75,7 @@ class GradeLog(Base):
     __tablename__ = "gradelog"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     score = Column(Float, nullable=False)
-    grader = Column(String, nullable=False)
+    grader = Column(UUID(as_uuid=True), nullable=False)
     details = Column(JSONB)          #rubric breakdown, AI confidence scores, etc.
     graded_at = Column(TIMESTAMP, server_default=func.now())
     submission_id = Column(UUID(as_uuid=True), ForeignKey("submission.id"))
@@ -74,6 +87,16 @@ class Feedback(Base):
     comments = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now())
     author_id = Column(UUID(as_uuid=True), ForeignKey("user.id"))
+
+class Uploads(Base):
+    __tablename__ = "uploads"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"))
+    filename = Column(String, nullable=False)
+    storage_url = Column(String)
+    status = Column(Enum("pending", "processed", "failed", name="upload_status"), default="pending")
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
 Base.metadata.create_all(engine)
 
