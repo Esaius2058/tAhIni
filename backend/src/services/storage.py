@@ -29,7 +29,7 @@ class StorageService:
 
             return new_upload
         except Exception as e:
-            self.logger.info(f"Error uploading file: {e}")
+            self.logger.error(f"Error uploading file: {e}")
             self.db.rollback()
             return None
 
@@ -40,7 +40,7 @@ class StorageService:
                 f.write(res)
             return file_dest
         except Exception as e:
-            self.logger.info(f"Error downloading file: {e}")
+            self.logger.error(f"Error downloading file: {e}")
             return None
 
     def delete_file(self, file_name: str):
@@ -53,7 +53,7 @@ class StorageService:
                 self.db.commit()
             return f"{file_name} deleted successfully"
         except Exception as e:
-            self.logger.info(f"Error deleting file: {e}")
+            self.logger.error(f"Error deleting file: {e}")
             self.db.rollback()
             return None
 
@@ -61,7 +61,7 @@ class StorageService:
         try:
             return supabase.storage.from_(bucket_name).get_public_url([file_name])
         except Exception as e:
-            self.logger.info(f"Error getting public url for '{file_name}': {e}")
+            self.logger.error(f"Error getting public url for '{file_name}': {e}")
             return None
 
     def list_files(self, user_id=None):
@@ -71,7 +71,7 @@ class StorageService:
                 query = query.filter_by(user_id=user_id)
             return query.all()
         except Exception as e:
-            self.logger.info(f"Error listing uploaded files: {e}")
+            self.logger.error(f"Error listing uploaded files: {e}")
             self.db.rollback()
             return None
 
@@ -86,6 +86,6 @@ class StorageService:
             self.db.refresh(upload)
             return True
         except Exception as e:
-            self.logger.info(f"Error updating upload status: {e}")
+            self.logger.error(f"Error updating upload status: {e}")
             self.db.rollback()
             return False
