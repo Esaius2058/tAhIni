@@ -4,17 +4,17 @@
 tAhIni/
 │
 ├── backend/               # Python FastAPI/Django app (APIs, DB models, agents)
-│   ├── app/
-│   ├── ├── migrations          # migrations (if SQLAlchemy)
+│   ├── src/         # migrations (if SQLAlchemy)
+│   │   ├── agents/        # AI exam agents, grading, NLP pipelines
 │   │   ├── api/           # REST/GraphQL routes
 │   │   ├── core/          # config, settings, constants
 │   │   ├── db/            # SQLAlchemy/Prisma/ORM models, migrations
-│   │   ├── agents/        # AI exam agents, grading, NLP pipelines
 │   │   ├── services/      # business logic (exam creation, scoring, etc.)
 │   │   ├── schemas/       # Pydantic (request/response validation)
-│   │   ├── alembic.ini
 │   │   └── utils/         # helpers (logging, security, common funcs)
 │   │
+│   ├── migrations
+│   ├── alembic.ini
 │   ├── tests/             # pytest/unit + integration tests
 │   └── main.py            # FastAPI entrypoint
 │
