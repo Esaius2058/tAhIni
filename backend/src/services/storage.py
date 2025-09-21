@@ -1,8 +1,5 @@
 import supabase
 import logging
-
-from jeepney.low_level import Boolean
-
 from backend.src.db.models import Uploads
 from backend.src.services.supabase_client import supabase_client
 
@@ -20,7 +17,7 @@ class StorageService:
 
             new_upload = Uploads(
                 filename=file_name,
-                storage_ulr=public_url,
+                storage_url=public_url,
                 user_id=user_id
             )
             self.db.add(new_upload)
