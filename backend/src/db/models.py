@@ -5,8 +5,8 @@ from sqlalchemy.orm import relationship, sessionmaker
 from pathlib import Path
 from dotenv import load_dotenv
 import sys
+import enum
 import uuid
-
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 print("BASE_DIR", BASE_DIR)
@@ -28,10 +28,19 @@ class Exam(Base):
     questions = relationship("Question", back_populates="exam")
     submissions = relationship("Submission", back_populates="exam")
 
+class QuestionType(enum.Enum):
+    MCQ = "mcq"
+    MULTI_RESPONSE = "multi_response"
+    TRUE_FALSE = "true_false"
+    SHORT_ANSWER = "short_answer"
+    ESSAY = "essay"
+    CODE = "code"
+    NUMERICAL = "numerical"
+
 class Question(Base):
     __tablename__ = "question"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    type = Column(String, nullable=False)
+    type = Column(Enum(QuestionType, name="question_type_enum"), nullable=False, default=QuestionType.SHORT_ANSWER)
     text = Column(String)
     difficulty = Column(String)
     tags = Column(JSONB)
