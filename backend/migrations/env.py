@@ -12,7 +12,7 @@ load_dotenv(BASE_DIR / ".env")
 sys.path.append(str(BASE_DIR))
 
 from src.db.base import Base
-from src.db.models import models
+from src.db import models
 
 config = context.config
 
