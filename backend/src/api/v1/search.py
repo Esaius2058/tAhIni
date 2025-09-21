@@ -1,0 +1,20 @@
+import logging
+from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends
+from backend.src.db.base import get_db
+from backend.src.services.questions import QuestionService
+from backend.src.schemas.search import SearchResponse, SearchRequest
+
+class SearchRouter:
+    def __init__(self, db_session: Session = Depends(get_db)):
+        self.router = APIRouter()
+        self.logger = logging.getLogger("Search Router")
+        self.router.add_api_route(
+            "/semantic-search", self.search_questions, response_model=list[SearchResponse], methods=["POST"]
+        )
+        self.db = db_session
+        self.question_service = QuestionService(self.db)
+
+    def search_questions(self, payload: SearchRequest):
+        self.logger.info(f"Semantic search for: {payload.query}")
+        return self.question_service.semantic_search(payload.query, payload.top_n)
