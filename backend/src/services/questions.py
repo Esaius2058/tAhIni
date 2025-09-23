@@ -45,6 +45,44 @@ class QuestionService:
             self.logger.error(f"Error trying fetch similar questions: {e}")
             return None
 
+    def keyword_search(self, query:str, difficulty: str | None, tags: list[str] | None):
+        try:
+            sql = text("""
+                SELECT id, text, tags,
+                    ts_rank_cd(
+                        to_tsvector('english', text), 
+                        plainto_tsquery(:query)
+                    ) AS rank
+                FROM questions
+                where to_tsvector('english', text) @@ plainto_tsquery(:query)
+            """)
+
+            if difficulty:
+                sql += " AND difficulty = :difficulty"
+
+            if tags:
+                sql += " AND tags @> ARRAY[:tags]"
+
+            sql += " ORDER BY rank DESC"
+
+            params = {"query": query}
+            if difficulty:
+                params["difficulty"] = difficulty
+            if tags:
+                params["tags"] = tags
+
+            text_results = self.db.execute(
+                sql,
+                params
+            ).fetchall()
+            return text_results
+        except Exception as e:
+            self.logger.warning(
+                f"Keyword search failed for query='{query}' "
+                f"difficulty='{difficulty}' tags='{tags}': {e}"
+            )
+            return None
+
     def get_question_by_id(self, question_id):
         try:
             question = self.db.query(Question).filter_by(id=question_id).first()
