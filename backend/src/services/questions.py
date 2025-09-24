@@ -1,3 +1,4 @@
+import json
 import logging
 from backend.src.utils.embeddings import generate_embedding
 from backend.src.db.models import Question
@@ -61,7 +62,7 @@ class QuestionService:
                 sql += " AND difficulty = :difficulty"
 
             if tags:
-                sql += " AND tags @> ARRAY[:tags]"
+                sql += " AND tags @> :tags::jsonb"
 
             sql += " ORDER BY rank DESC"
 
@@ -69,19 +70,64 @@ class QuestionService:
             if difficulty:
                 params["difficulty"] = difficulty
             if tags:
-                params["tags"] = tags
+                params["tags"] = json.dumps(tags)
 
-            text_results = self.db.execute(
-                sql,
-                params
-            ).fetchall()
+            text_results = self.db.execute(sql, params).fetchall()
             return text_results
         except Exception as e:
-            self.logger.warning(
+            self.logger.error(
                 f"Keyword search failed for query='{query}' "
                 f"difficulty='{difficulty}' tags='{tags}': {e}"
             )
             return None
+
+    def hybrid_search(self, query: str, difficulty: str | None, tags: list[str] | None, top_n: int = 5):
+        try:
+            text_results = self.keyword_search(query, difficulty, tags)
+            semantic_results = self.semantic_search(query, top_n)
+
+            text_scores = [row.rank for row in text_results]
+            semantic_scores = [row.similarity for row in semantic_results]
+
+            normalized_text = self.normalize_scores(text_scores)
+            normalized_semantic = self.normalize_scores(semantic_scores)
+
+            merged = [
+                {"id": tr.id, "text": tr.text, "tags": tr.tags,
+                 "score": self.merge_scores(ts,ss, weights={"text": 0.6, "semantic": 0.4})}
+                for tr, ts, ss in zip(text_results, normalized_text, normalized_semantic)
+            ]
+
+            ranked = self.sort_by_score(merged)
+            return ranked
+        except Exception as e:
+            self.logger.error(
+                f"Hybrid search failed for query='{query}': {e}"
+            )
+            return None
+
+    def merge_scores(self, text_score, semantic_score, weights=None):
+        if weights is None:
+            weights = {"text": 0.5, "semantic": 0.5}
+        return (
+            text_score * weights["text"]
+            + semantic_score * weights["semantic"]
+        )
+
+    def normalize_scores(self, raw_scores: list[float]) -> list[float]:
+        if not raw_scores:
+            return []
+
+        min_score = min(raw_scores)
+        max_score = max(raw_scores)
+
+        if max_score == min_score:
+            return [0.0 for _ in raw_scores]
+
+        return [(s - min_score) / (max_score - min_score) for s in raw_scores]
+
+    def sort_by_score(self, results: list[dict]) -> list[dict]:
+        return sorted(results, key=lambda r: r["score"], reverse=True)
 
     def get_question_by_id(self, question_id):
         try:
