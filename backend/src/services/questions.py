@@ -4,6 +4,10 @@ from backend.src.utils.embeddings import generate_embedding
 from backend.src.db.models import Question
 from sqlalchemy.orm import Session
 
+class ServiceError(Exception): pass
+class NotFoundError(ServiceError): pass
+class ValidationError(ServiceError): pass
+
 class QuestionService:
     def __init__(self, db_session: Session):
         self.logger = logging.getLogger("Question Service")
@@ -22,9 +26,9 @@ class QuestionService:
                 self.db.commit()
             return question
         except Exception as e:
-            self.logger.error(f"Error storing question in database: {e}")
             self.db.rollback()
-            return None
+            self.logger.error(f"Failed to store question: {e}")
+            raise ServiceError("Could not store question")
 
     def semantic_search(self, query: str, top_n: int = 5):
         try:
@@ -43,8 +47,8 @@ class QuestionService:
             ).fetchall()
             return result
         except Exception as e:
-            self.logger.error(f"Error trying fetch similar questions: {e}")
-            return None
+            self.logger.error(f"Semantic search failed: {e}")
+            raise ServiceError("Could not perform semantic search")
 
     def keyword_search(self, query:str, difficulty: str | None, tags: list[str] | None):
         try:
@@ -75,11 +79,8 @@ class QuestionService:
             text_results = self.db.execute(sql, params).fetchall()
             return text_results
         except Exception as e:
-            self.logger.error(
-                f"Keyword search failed for query='{query}' "
-                f"difficulty='{difficulty}' tags='{tags}': {e}"
-            )
-            return None
+            self.logger.error(f"Keyword search failed: {e}")
+            raise ServiceError("Could not perform keyword search")
 
     def hybrid_search(self, query: str, difficulty: str | None, tags: list[str] | None, top_n: int = 5):
         try:
@@ -101,10 +102,8 @@ class QuestionService:
             ranked = self.sort_by_score(merged)
             return ranked
         except Exception as e:
-            self.logger.error(
-                f"Hybrid search failed for query='{query}': {e}"
-            )
-            return None
+            self.logger.error(f"Hybrid search failed: {e}")
+            raise ServiceError("Could not perform hybrid search")
 
     def merge_scores(self, text_score, semantic_score, weights=None):
         if weights is None:
@@ -132,18 +131,22 @@ class QuestionService:
     def get_question_by_id(self, question_id):
         try:
             question = self.db.query(Question).filter_by(id=question_id).first()
+            if not question:
+                raise NotFoundError(f"Question {question_id} not found")
             return question
+        except NotFoundError:
+            raise
         except Exception as e:
-            self.logger.error(f"Error trying fetch question by id: {e}")
-            return None
+            self.logger.error(f"Get question by ID failed: {e}")
+            raise ServiceError("Could not fetch question by id")
 
     def get_questions_by_tags(self, tags):
         try:
             questions = self.db.query(Question).filter(Question.contains(tags)).all()
             return questions
         except Exception as e:
-            self.logger.error(f"Error trying to fetch questions by tags: {e}")
-            return None
+            self.logger.error(f"Get questions by tags failed: {e}")
+            raise ServiceError("Could not fetch questions by tags")
 
     def list_questions(self, tags=None, text=None, difficulty=None, limit=20, offset=0):
         try:
@@ -160,8 +163,8 @@ class QuestionService:
             questions = query.limit(limit).offset(offset).all()
             return questions
         except Exception as e:
-            self.logger.error(f"Error trying list questions: {e}")
-            return None
+            self.logger.error(f"List questions failed: {e}")
+            raise ServiceError("Could not list questions")
 
     def update_question(self, question_id: str, new_difficulty = None, tags = None, question_type = None):
         try:
@@ -180,10 +183,13 @@ class QuestionService:
             self.db.commit()
             self.db.refresh(question)
             return True
+        except NotFoundError as nf:
+            self.logger.warning(str(nf))
+            return {"error": str(nf)}, 404
         except Exception as e:
-            self.logger.error(f"Error updating question: {e}")
             self.db.rollback()
-            return False
+            self.logger.error(f"Update question failed: {e}")
+            raise ServiceError("Could not update question")
 
     def delete_question(self, question_id):
         try:
@@ -194,9 +200,9 @@ class QuestionService:
                 return True
             return False
         except Exception as e:
-            self.logger.error(f"Error deleting question: {e}")
             self.db.rollback()
-            return False
+            self.logger.error(f"Delete question failed: {e}")
+            raise ServiceError("Could not delete question")
 
     def bulk_store_questions(self, questions: list[dict | Question]):
         try:
@@ -212,8 +218,8 @@ class QuestionService:
             self.db.commit()
             return {"message": f"Successfully stored {count} questions!!", "questions": stored}
         except Exception as e:
-            self.logger.error(f"Error storing questions in bulk: {e}")
             self.db.rollback()
-            return None
+            self.logger.error(f"Bulk store failed: {e}")
+            raise ServiceError("Could not bulk store questions")
 
     #def get_random_question(self):
