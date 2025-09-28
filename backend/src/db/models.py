@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String,Enum, Text, TIMESTAMP, ForeignKey, Float, func
+from sqlalchemy import Column, String, Enum, Text, TIMESTAMP, ForeignKey, Float, func, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship, sessionmaker
@@ -70,6 +70,21 @@ class Submission(Base):
 
     user = relationship("User", back_populates="submissions")
     exam = relationship("Exam", back_populates="submissions")
+    answers = relationship("SubmissionAnswer", back_populates="submission", cascade="all, delete-orphan")
+
+class SubmissionAnswer(Base):
+    __table_name__ = "submission_answer"
+    submission_id = Column(UUID(as_uuid=True), ForeignKey("submission.id"))
+    question_id = Column(UUID(as_uuid=True), ForeignKey("question.id"))
+    answer = Column(Text, nullable=False)
+    is_correct = Column(Boolean, default=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("submission_id", "question_id")
+    )
+
+    submission = relationship("Submission", back_populates="answers")
+    question = relationship("Question")
 
 class User(Base):
     __tablename__ = "user"
