@@ -86,12 +86,17 @@ class SubmissionAnswer(Base):
     submission = relationship("Submission", back_populates="answers")
     question = relationship("Question")
 
+class UserType(enum.Enum):
+    STUDENT = "student"
+    INSTRUCTOR = "instructor"
+    ADMIN = "admin"
+
 class User(Base):
     __tablename__ = "user"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
-    type = Column(String)
+    type = Column(Enum(UserType, name="user_type_enum"), default=UserType.STUDENT)
 
     submissions = relationship("Submission", back_populates="user")
 
