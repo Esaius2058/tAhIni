@@ -16,15 +16,35 @@ sys.path.append(str(BASE_DIR))
 
 from src.db.base import Base, engine
 
+class Program(Base):
+    __tablename__ = "program"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(String)
+    duration_years = Column(Integer)
+
+    courses = relationship("Course", back_populates=program)
+
+class Course(Base):
+    __tablename__ = "course"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    program_id = Column(UUID(as_uuid=True), ForeignKey("program.id"))
+
+    program = relationship("Program", back_populates="courses")
+    exams = relationship("Exam", back_populates="course")
+
 class Exam(Base):
     __tablename__ = "exam"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("course.id"))
     title = Column(String, nullable=False)
     subject = Column(String, nullable=False)
     duration = Column(String)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
+    course = relationship("Course", back_populates="exams")
     questions = relationship("Question", back_populates="exam")
     submissions = relationship("Submission", back_populates="exam")
 
