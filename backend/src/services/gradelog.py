@@ -31,6 +31,18 @@ class GradeLogService:
             self.logger.error(f"Get grade log failed: {e}")
             raise ServiceError("Could not fetch grade log") from e
 
+    def get_submission_grade_log(self, submission_id: str):
+        try:
+            grade_log = self.db.query(GradeLog).filter(GradeLog.submission_id == submission_id).first()
+            if not grade_log:
+                raise NotFoundError("GradeLog not found")
+            return grade_log
+        except NotFoundError:
+            raise
+        except Exception as e:
+            self.logger.error(f"Get grade log failed: {e}")
+            raise ServiceError("Could not fetch grade log") from e
+
     def update_grade_log(self, grade_log_id: str, **kwargs):
         try:
             grade_log = self.get_grade_log(grade_log_id)
