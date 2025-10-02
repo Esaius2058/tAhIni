@@ -41,6 +41,7 @@ class Exam(Base):
     title = Column(String, nullable=False)
     subject = Column(String, nullable=False)
     duration = Column(String)
+    pass_mark = Column(Float, default=40.0)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
@@ -88,6 +89,12 @@ class Submission(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"))
     exam_id = Column(UUID(as_uuid=True), ForeignKey("exam.id"))
 
+    grade_log = relationship(
+                                "GradeLog",
+                                back_populates="submission",
+                                uselist=False,
+                                cascade="all, delete-orphan"
+                            )
     user = relationship("User", back_populates="submissions")
     exam = relationship("Exam", back_populates="submissions")
     answers = relationship("SubmissionAnswer", back_populates="submission", cascade="all, delete-orphan")
@@ -128,6 +135,8 @@ class GradeLog(Base):
     details = Column(JSONB)          #rubric breakdown, AI confidence scores, etc.
     graded_at = Column(TIMESTAMP, server_default=func.now())
     submission_id = Column(UUID(as_uuid=True), ForeignKey("submission.id"))
+
+    submission = relationship("Submission", back_populates="grade_log")
 
 class Feedback(Base):
     __tablename__ = "feedback"
