@@ -100,7 +100,7 @@ class Submission(Base):
     answers = relationship("SubmissionAnswer", back_populates="submission", cascade="all, delete-orphan")
 
 class SubmissionAnswer(Base):
-    __table_name__ = "submission_answer"
+    __tablename__ = "submission_answer"
     submission_id = Column(UUID(as_uuid=True), ForeignKey("submission.id"))
     question_id = Column(UUID(as_uuid=True), ForeignKey("question.id"))
     answer = Column(Text, nullable=False)
