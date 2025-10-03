@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from backend.src.db.models import Exam
+from backend.src.utils.exceptions import NotFoundError, ServiceError
 
 class ExamService:
     def __init__(self, db_session: Session):
@@ -26,12 +27,26 @@ class ExamService:
     def get_exam_by_id(self, exam_id: str):
         try:
             exam = self.db.query(Exam).filter_by(id=exam_id).first()
+            if not exam:
+                raise NotFoundError(f"Exam {exam_id} not found")
             return exam
         except Exception as e:
             self.logger.error(
                 f"Failed to fetch exam with id: {exam_id} : {e}"
             )
-            raise ValueError(f"Failed to fetch exam with id: {exam_id} : {e}")
+            raise ServiceError(f"Failed to fetch exam with id: {exam_id} : {e}")
+
+    def get_exams_by_course(self, course_id: str):
+        try:
+            exams = self.db.query(Exam).filter(Exam.course_id == course_id).all()
+            if not exams:
+                raise NotFoundError(f"Exams for course id {course_id} not found")
+            return exams
+        except Exception as e:
+            self.logger.error(
+                f"Failed to fetch exams for course: {course_id} : {e}"
+            )
+            raise ServiceError(f"Failed to fetch exam for course: {course_id} : {e}")
 
     def list_exams(self, filters: dict | None, limit: int = 50, offset: int = 0):
         try:
