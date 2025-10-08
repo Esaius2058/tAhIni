@@ -1,8 +1,10 @@
 import logging
 import time
+
+from numpy.ma.extras import average
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from backend.src.db.models import Submission, GradeLog
+from backend.src.db.models import Submission, GradeLog, User
 from backend.src.services import exam, course, submission
 from backend.src.utils.exceptions import NotFoundError, ServiceError
 
@@ -131,42 +133,124 @@ class AnalyticsService:
             raise ServiceError("Could not compute course performance") from e
 
 
-def course_performance_per_semester_sql(self, course_id: str, start_date: datetime, end_date: datetime):
-    try:
-        exam_ids = [
-            e.id for e in self.exam_service.get_exams_by_course(course_id)
-        ]
+    def course_performance_per_semester_sql(self, course_id: str, start_date: datetime, end_date: datetime):
+        try:
+            exam_ids = [
+                e.id for e in self.exam_service.get_exams_by_course(course_id)
+            ]
 
-        result = (
-            self.db.query(
+            result = (
+                self.db.query(
+                    func.count(Submission.id).label("num_submissions"),
+                    func.avg(GradeLog.score).label("average_score"),
+                    func.sum(
+                        func.case(
+                            (GradeLog.score >= 40, 1), else_=0
+                        )
+                    ).label("pass_count"),
+                )
+                .join(GradeLog, Submission.id == GradeLog.submission_id)
+                .filter(
+                    Submission.exam_id.in_(exam_ids),
+                    Submission.submitted_at >= start_date,
+                    Submission.submitted_at <= end_date,
+                )
+                .one()
+            )
+
+            return {
+                "course id": course_id,
+                "course name": self.course_service.get_course(course_id).name,
+                "number of exams": len(exam_ids),
+                "number of students": result.num_submissions,
+                "average score": float(result.average_score or 0),
+                "pass rate": (
+                    result.pass_count / result.num_submissions
+                    if result.num_submissions > 0 else 0
+                ),
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to compute course performance: {e}")
+            raise ServiceError("Could not compute course performance") from e
+
+    def grade_from_score(self, score):
+        if score >= 70:
+            return "A"
+        elif score >= 60:
+            return "B"
+        elif score >= 50:
+            return "C"
+        elif score >= 40:
+            return "D"
+        else:
+            return "F"
+
+    def student_performance_per_semester(self, student_id: str, start_date: datetime, end_date: datetime):
+        try:
+            query = (self.db.query(
+                Exam.course_id,
                 func.count(Submission.id).label("num_submissions"),
-                func.avg(GradeLog.score).label("average_score"),
-                func.sum(
-                    func.case(
-                        (GradeLog.score >= 40, 1), else_=0
-                    )
-                ).label("pass_count"),
+                func.avg(GradeLog.score).label("average_score")
             )
-            .join(GradeLog, Submission.id == GradeLog.submission_id)
-            .filter(
-                Submission.exam_id.in_(exam_ids),
+            .join(Submission.exam)
+            .join(Submission.grade_log)
+            .filter(Submission.user_id == student_id,
                 Submission.submitted_at >= start_date,
-                Submission.submitted_at <= end_date,
+                Submission.submitted_at <= end_date)
+            .group_by(Exam.course_id)
             )
-            .one()
-        )
 
-        return {
-            "course id": course_id,
-            "course name": self.course_service.get_course(course_id).name,
-            "number of exams": len(exam_ids),
-            "number of students": result.num_submissions,
-            "average score": float(result.average_score or 0),
-            "pass rate": (
-                result.pass_count / result.num_submissions
-                if result.num_submissions > 0 else 0
-            ),
-        }
-    except Exception as e:
-        self.logger.error(f"Failed to compute course performance: {e}")
-        raise ServiceError("Could not compute course performance") from e
+            results = query.all()
+            overall_avg = sum(r.average_score for r in results) / len(results) if results else 0
+
+            return {
+                "student_id": student_id,
+                "date_range": (start_date, end_date),
+                "num_courses": len(results),
+                "overall_average": overall_avg,
+                "overall_grade": self.grade_from_score(overall_avg),
+                "courses": [
+                {
+                    "course_id": r.course_id,
+                    "course_name": self.course_service.get_course(r.course_id).name,
+                    "average_score": r.average_score,
+                    "grade": self.grade_from_score(r.average_score),
+                }
+                for r in results
+                ],
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to compute student performance: {e}")
+            raise ServiceError("Could not compute student performance") from e
+
+    def student_performance_per_course(self, student_id: str, start_date: datetime, end_date: datetime):
+        try:
+            submissions = (self.db.query(Submission)
+            .join(GradeLog, Submission.id == GradeLog.submission_id)
+            .join(Exam, Submission.exam_id == Exam.id)
+            .filter(
+                Submission.user_id == student_id,
+                Submission.submitted_at >= start_date,
+                Submission.submitted_at <= end_date
+            ).all())
+
+            return [{
+                "course_id": sub.exam.course_id,
+                "course_name": sub.exam.course.name,
+                "exam_id": sub.exam_id,
+                "exam_title": sub.exam.title,
+                "score": sub.grade_log.score,
+                "grade": self.grade_from_score(sub.grade_log.score),
+                "status": "passed" if sub.grade_log.score >= 40 else "failed",
+                "submitted_at": sub.submitted_at
+            } for sub in submissions]
+        except Exception as e:
+            self.logger.error(f"Failed to compute student performance: {e}")
+            raise ServiceError("Could not compute student performance") from e
+
+    def student_progress(self, user_id: str):
+        try:
+            _
+        except Exception as e:
+            self.logger.error(f"Failed to compute student progress for {user_id}: {e}")
+            raise ServiceError("Could not compute student progress") from e
