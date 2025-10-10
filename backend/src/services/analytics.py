@@ -5,13 +5,14 @@ from numpy.ma.extras import average
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from backend.src.db.models import Submission, GradeLog, User
-from backend.src.services import exam, course, submission
+from backend.src.services import exam, course, submission, semester
 from backend.src.utils.exceptions import NotFoundError, ServiceError
 
 class AnalyticsService:
     def __init__(self, db_session: Session):
         self.logger = logging.getLogger("Analytics Service")
         self.db = db_session
+        self.semester_service = semester.SemesterService(db_session)
         self.exam_service = exam.ExamService(db_session)
         self.course_service = course.CourseService(db_session)
         self.submission_service = submission.SubmissionService(db_session)
@@ -91,16 +92,15 @@ class AnalyticsService:
             if not isinstance(start_date, datetime) or not isinstance(end_date, datetime):
                 raise TypeError("start_date and end_date must be datetime objects")
 
-            exams = self.exam_service.get_exams_by_course(course_id)
+            semester = self.semester_service.get_semester_by_date(start_date, end_date)
+            exams = self.exam_service.get_exams_by_course(course_id, semester.id)
 
             exam_ids = [e.id for e in exams]
             query = (
                 self.db.query(Submission)
                 .options(joinedload(Submission.grade_log))
                 .filter(
-                    Submission.exam_id.in_(exam_ids),
-                    Submission.submitted_at >= start_date,
-                    Submission.submitted_at <= end_date
+                    Submission.exam_id.in_(exam_ids)
                 )
             )
 
@@ -109,12 +109,14 @@ class AnalyticsService:
             scores = [sub.grade_log.score for sub in submissions]
             total_score = sum(score for score in scores)
             exam_stats =[self.exam_statistics(exam_id) for exam_id in exam_ids]
+
             overall_average_score = total_score / total_submissions
             overall_pass_rate = sum(stat["pass rate"] for stat in exam_stats) / total_submissions
 
             return {
                 "course id": course_id,
                 "course name": self.course_service.get_course(course_id).name,
+                "semester": semester.name,
                 "number of exams": len(exam_ids),
                 "number of students": total_submissions,
                 "average score": overall_average_score,
@@ -135,8 +137,9 @@ class AnalyticsService:
 
     def course_performance_per_semester_sql(self, course_id: str, start_date: datetime, end_date: datetime):
         try:
+            semester = self.semester_service.get_semester_by_date(start_date, end_date)
             exam_ids = [
-                e.id for e in self.exam_service.get_exams_by_course(course_id)
+                e.id for e in self.exam_service.get_exams_by_course(course_id, semester.id)
             ]
 
             result = (
@@ -161,6 +164,7 @@ class AnalyticsService:
             return {
                 "course id": course_id,
                 "course name": self.course_service.get_course(course_id).name,
+                "semester": semester.name,
                 "number of exams": len(exam_ids),
                 "number of students": result.num_submissions,
                 "average score": float(result.average_score or 0),
@@ -185,19 +189,66 @@ class AnalyticsService:
         else:
             return "F"
 
+    def score_to_gpa(self, score):
+        if score >= 90:
+            return 4.0
+        elif score >= 80:
+            return 3.7
+        elif score >= 70:
+            return 3.0
+        elif score >= 60:
+            return 2.0
+        elif score >= 50:
+            return 1.0
+        else:
+            return 0.0
+
+    def compute_improvement_rate(self, progress_data: dict):
+        if len(progress_data) < 2:
+            return 0
+        first = progress_data[0]["average_score"]
+        last = progress_data[-1]["average_score"]
+        return ((last - first) / first) * 100 if first else 0
+
+    def compute_gpa_trend(self, progress_data: dict):
+        return [(s["semester_name"], s["average_score"]) for s in progress_data]
+
+    def find_weakest_course(self, progress_data: dict):
+        all_courses = [c for s in progress_data for c in s["courses"]]
+        return min(all_courses, key=lambda c: c["average_score"])
+
+    def compute_cumulative_gpa(self, progress_data):
+        if not progress_data:
+            return 0.0
+
+        total_weighted_gpa = 0
+        total_courses = 0
+
+        for semester in progress_data:
+            gpa = score_to_gpa(semester["average_score"])
+            num_courses = semester.get("num_courses", 1)
+            total_weighted_gpa += gpa * num_courses
+            total_courses += num_courses
+
+        cumulative_gpa = total_weighted_gpa / total_courses if total_courses > 0 else 0
+        return round(cumulative_gpa, 2)
+
     def student_performance_per_semester(self, student_id: str, start_date: datetime, end_date: datetime):
         try:
-            query = (self.db.query(
+            semester = self.semester_service.get_semester_by_date(start_date, end_date)
+            query = (
+                self.db.query(
                 Exam.course_id,
                 func.count(Submission.id).label("num_submissions"),
                 func.avg(GradeLog.score).label("average_score")
-            )
-            .join(Submission.exam)
-            .join(Submission.grade_log)
-            .filter(Submission.user_id == student_id,
-                Submission.submitted_at >= start_date,
-                Submission.submitted_at <= end_date)
-            .group_by(Exam.course_id)
+                )
+                .join(Submission.exam)
+                .join(Submission.grade_log)
+                .filter(
+                    Submission.user_id == student_id,
+                    Exam.semester_id == semester.id
+                )
+                .group_by(Exam.course_id)
             )
 
             results = query.all()
@@ -225,13 +276,16 @@ class AnalyticsService:
 
     def student_performance_per_course(self, student_id: str, start_date: datetime, end_date: datetime):
         try:
+            semester = self.semester_service.get_semester_by_date(start_date, end_date)
+
+            exam_ids = [e.id for e in self.exam_service.get_exams_by_semester(semester.id)]
+
             submissions = (self.db.query(Submission)
             .join(GradeLog, Submission.id == GradeLog.submission_id)
             .join(Exam, Submission.exam_id == Exam.id)
             .filter(
                 Submission.user_id == student_id,
-                Submission.submitted_at >= start_date,
-                Submission.submitted_at <= end_date
+                Submission.exam_id.in_(exam_ids)
             ).all())
 
             return [{
@@ -245,12 +299,46 @@ class AnalyticsService:
                 "submitted_at": sub.submitted_at
             } for sub in submissions]
         except Exception as e:
-            self.logger.error(f"Failed to compute student performance: {e}")
+            self.logger.error(f"Failed to compute student performance for semester: {e}")
             raise ServiceError("Could not compute student performance") from e
 
     def student_progress(self, user_id: str):
         try:
-            _
+            semesters = {}
+
+            if not semesters:
+                raise NotFoundError(f"No semesters found for student {user_id}")
+
+            progress_data = []
+
+            for semester in semesters:
+                semester_performance = self.student_performance_per_semester(
+                    user_id, semester.start_date, semester.end_date
+                )
+
+                progress_data.append({
+                    "semester_name": semester.name,
+                    "average_score": semester_performance["overall_average"],
+                    "grade": semester_performance["overall_grade"],
+                    "num_courses": semester_performance["num_courses"],
+                    "courses": semester_performance["courses"]
+                })
+
+                improvement_rate = compute_improvement_rate(progress_data)
+                gpa_trend = compute_gpa_trend(progress_data)
+                weakest_course = find_weakest_course(progress_data)
+
+                return {
+                    "student_id": student_id,
+                    "total_semesters": len(progress_data),
+                    "average_gpa": self.compute_cumulative_gpa(progress_data),
+                    "gpa_trend": gpa_trend,
+                    "improvement_rate": improvement_rate,
+                    "weakest_course": weakest_course,
+                    "semester_breakdown": progress_data
+                }
+        except NotFoundError:
+            raise
         except Exception as e:
             self.logger.error(f"Failed to compute student progress for {user_id}: {e}")
             raise ServiceError("Could not compute student progress") from e
