@@ -1,6 +1,6 @@
 import logging
 import time
-
+from collections import defaultdict
 from numpy.ma.extras import average
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -73,12 +73,12 @@ class AnalyticsService:
             if not scores:
                 return {"average score": 0, "pass rate": 0}
 
-            average = sum(scores) / len(scores)
+            average_score = sum(scores) / len(scores)
             pass_rate = self.exam_pass_rate(exam_id)
 
             return {
                 "exam title": exam_obj.title,
-                "average score": average,
+                "average score": average_score,
                 "pass rate": pass_rate
             }
         except NotFoundError:
@@ -304,41 +304,96 @@ class AnalyticsService:
 
     def student_progress(self, user_id: str):
         try:
-            semesters = {}
+            results = (
+                query(Exam)
+                .join(Semester)
+                .options(
+                    selectinload(Exam.semester),
+                    selectinload(Exam.submissions).selectinload(Submission.grade_log),
+                )
+                .filter(Exam.user_id == user_id)
+                .all()
+            )
 
-            if not semesters:
+            if not results:
                 raise NotFoundError(f"No semesters found for student {user_id}")
+
+            semester_map = defaultdict(list)
+            for exam in results:
+                semester_map[exam.semester].append(exam)
+            #semesters = sorted({result.semester for result in results}, key=lambda s: s.start_date)
+
+            semesters = sorted(semester_map.keys(), key=lambda s: s.start_date)
 
             progress_data = []
 
             for semester in semesters:
-                semester_performance = self.student_performance_per_semester(
+                exams = semester_map[semester]
+                exam_scores = []
+
+                for exam in exams:
+                    submission_scores = [
+                        s.grade_log.score
+                        for s in exam.submissions
+                        if s.grade_log and s.grade_log.score is not None
+                    ]
+
+                    if submission_scores:
+                        exam_avg = mean(submission_scores)
+                        exam_scores.append(exam_avg)
+
+                if not exam_scores:
+                    continue  # skip semesters without any scores
+
+                semester_avg = mean(exam_scores)
+                grade = self.score_to_grade(semester_avg)
+                num_courses = len(exams)
+
+                """semester_performance = self.student_performance_per_semester(
                     user_id, semester.start_date, semester.end_date
-                )
+                )"""
 
                 progress_data.append({
                     "semester_name": semester.name,
-                    "average_score": semester_performance["overall_average"],
-                    "grade": semester_performance["overall_grade"],
-                    "num_courses": semester_performance["num_courses"],
-                    "courses": semester_performance["courses"]
+                    "average_score": round(semester_avg, 2),
+                    "grade": grade,
+                    "num_courses": num_courses,
+                    "courses": [
+                        {
+                            "course_name": exam.course.name,
+                            "average_score": round(mean([
+                                s.grade_log.score for s in exam.submissions
+                                if s.grade_log and s.grade_log.score is not None
+                            ]), 2),
+                            "grade": self.score_to_grade(round(mean([
+                                s.grade_log.score for s in exam.submissions
+                                if s.grade_log and s.grade_log.score is not None
+                            ]), 2))
+                        }
+                        for exam in exams if exam.submissions
+                    ]
                 })
 
-                improvement_rate = compute_improvement_rate(progress_data)
-                gpa_trend = compute_gpa_trend(progress_data)
-                weakest_course = find_weakest_course(progress_data)
+            if not progress_data:
+                raise NotFoundError(f"No valid exam data found for {user_id}")
 
-                return {
-                    "student_id": student_id,
-                    "total_semesters": len(progress_data),
-                    "average_gpa": self.compute_cumulative_gpa(progress_data),
-                    "gpa_trend": gpa_trend,
-                    "improvement_rate": improvement_rate,
-                    "weakest_course": weakest_course,
-                    "semester_breakdown": progress_data
-                }
+            improvement_rate = compute_improvement_rate(progress_data)
+            gpa_trend = compute_gpa_trend(progress_data)
+            weakest_course = find_weakest_course(progress_data)
+
+            return {
+                "student_id": user_id,
+                "total_semesters": len(progress_data),
+                "average_gpa": self.compute_cumulative_gpa(progress_data),
+                "gpa_trend": gpa_trend,
+                "improvement_rate": improvement_rate,
+                "weakest_course": weakest_course,
+                "semester_breakdown": progress_data
+            }
+
         except NotFoundError:
             raise
         except Exception as e:
             self.logger.error(f"Failed to compute student progress for {user_id}: {e}")
             raise ServiceError("Could not compute student progress") from e
+        
