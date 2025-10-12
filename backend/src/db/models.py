@@ -27,17 +27,27 @@ class Program(Base):
 
 class Course(Base):
     __tablename__ = "course"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=true)
     name = Column(String, nullable=False)
     program_id = Column(UUID(as_uuid=True), ForeignKey("program.id"))
 
     program = relationship("Program", back_populates="courses")
     exams = relationship("Exam", back_populates="course")
 
+class Semester(Base):
+    __tablename__ = "semester"
+    id = Column(UUID(as_uuid=True), primary_key=true, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    start_date = Column(TIMESTAMP, nullable=False)
+    end_date = Column(TIMESTAMP, nullable=False)
+
+    exams = relationship("Exam", back_populates="semester")
+
 class Exam(Base):
     __tablename__ = "exam"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     course_id = Column(UUID(as_uuid=True), ForeignKey("course.id"))
+    semester_id = Column(UUID(as_uuid=True), ForeignKey("semester.id"))
     title = Column(String, nullable=False)
     subject = Column(String, nullable=False)
     duration = Column(String)
@@ -46,6 +56,7 @@ class Exam(Base):
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     course = relationship("Course", back_populates="exams")
+    semester = relationship("Semester", back_populates="exams")
     questions = relationship("Question", back_populates="exam")
     submissions = relationship("Submission", back_populates="exam")
 
@@ -123,6 +134,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True)
+    password = Column(String, nullable=False)
     type = Column(Enum(UserType, name="user_type_enum"), default=UserType.STUDENT)
 
     submissions = relationship("Submission", back_populates="user")
