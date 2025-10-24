@@ -1,33 +1,34 @@
-from sqlalchemy import Column, String, Enum, Text, TIMESTAMP, ForeignKey, Float, func, PrimaryKeyConstraint
+from sqlalchemy import Column, Boolean, String, Enum, Text, TIMESTAMP, ForeignKey, Float, func, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship, sessionmaker
 from pathlib import Path
 from dotenv import load_dotenv
-import sys
+import sys, os
 import enum
 import uuid
 
-BASE_DIR = Path(__file__).resolve().parents[3]
+"""BASE_DIR = Path(__file__).resolve().parents[3]
 print("BASE_DIR", BASE_DIR)
 load_dotenv(BASE_DIR / ".env")
 
-sys.path.append(str(BASE_DIR))
+sys.path.append(str(BASE_DIR))"""
 
-from src.db.base import Base, engine
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+from src.db.base import Base
 
 class Program(Base):
     __tablename__ = "program"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False, unique=True)
     description = Column(String)
-    duration_years = Column(Integer)
+    duration_years = Column(Float)
 
-    courses = relationship("Course", back_populates=program)
+    courses = relationship("Course", back_populates="program")
 
 class Course(Base):
     __tablename__ = "course"
-    id = Column(String, primary_key=true)
+    id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     program_id = Column(UUID(as_uuid=True), ForeignKey("program.id"))
 
@@ -36,7 +37,7 @@ class Course(Base):
 
 class Semester(Base):
     __tablename__ = "semester"
-    id = Column(UUID(as_uuid=True), primary_key=true, default=uuid.uuid4)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     start_date = Column(TIMESTAMP, nullable=False)
     end_date = Column(TIMESTAMP, nullable=False)
@@ -46,7 +47,7 @@ class Semester(Base):
 class Exam(Base):
     __tablename__ = "exam"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    course_id = Column(UUID(as_uuid=True), ForeignKey("course.id"))
+    course_id = Column(String, ForeignKey("course.id"))
     semester_id = Column(UUID(as_uuid=True), ForeignKey("semester.id"))
     title = Column(String, nullable=False)
     subject = Column(String, nullable=False)
@@ -118,7 +119,7 @@ class SubmissionAnswer(Base):
     is_correct = Column(Boolean, default=False)
 
     __table_args__ = (
-        PrimaryKeyConstraint("submission_id", "question_id")
+        PrimaryKeyConstraint("submission_id", "question_id"),
     )
 
     submission = relationship("Submission", back_populates="answers")
@@ -175,9 +176,3 @@ class ExamContent(Base):
     text = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-Base.metadata.create_all(engine)
-
-Session = sessionmaker(bind=engine)
-session = Session()
-
-session.commit()
