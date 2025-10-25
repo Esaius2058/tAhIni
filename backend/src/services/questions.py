@@ -1,25 +1,24 @@
 import json
 import logging
-from backend.src.utils.embeddings import generate_embedding
-from backend.src.db.models import Question
+from sqlalchemy import text
+from src.utils.embeddings import generate_embedding
+from src.db.models import Question, QuestionType
 from sqlalchemy.orm import Session
-
-class ServiceError(Exception): pass
-class NotFoundError(ServiceError): pass
-class ValidationError(ServiceError): pass
+from src.utils.exceptions import ServiceError, NotFoundError
 
 class QuestionService:
     def __init__(self, db_session: Session):
         self.logger = logging.getLogger("Question Service")
         self.db = db_session
 
-    def store_question(self, text: str, tags: list[str], bulk: bool = False):
+    def store_question(self, text: str, tags: list[str], type: QuestionType, bulk: bool = False):
         try:
             embedding = generate_embedding(text)
             question = Question(
                 text=text,
                 tags=tags,
                 embedding=embedding,
+                type=type,
             )
             if not bulk:
                 self.db.add(question)
@@ -35,40 +34,46 @@ class QuestionService:
             query_embedding = generate_embedding(query)
 
             sql = text("""
-            SELECT id, text, tags
-            FROM questions
-            ORDER BY embedding <-> :embedding
-            LIMIT :limit;
+                SELECT 
+                    id, 
+                    text, 
+                    tags,
+                    embedding <-> (:embedding)::vector AS similarity
+                FROM question
+                ORDER BY embedding <-> (:embedding)::vector
+                LIMIT :limit;
             """)
 
-            result = self.db.execute(
+            results = self.db.execute(
                 sql,
                 {"embedding": query_embedding, "limit": top_n}
             ).fetchall()
-            return result
+            print("Semantic results:", results)
+            return results
         except Exception as e:
             self.logger.error(f"Semantic search failed: {e}")
             raise ServiceError("Could not perform semantic search")
 
-    def keyword_search(self, query:str, difficulty: str | None, tags: list[str] | None):
+    def keyword_search(self, query:str, difficulty: str | None=None, tags: list[str] | None=None):
         try:
-            sql = text("""
+            sql_query = """
                 SELECT id, text, tags,
                     ts_rank_cd(
                         to_tsvector('english', text), 
                         plainto_tsquery(:query)
                     ) AS rank
-                FROM questions
+                FROM question
                 where to_tsvector('english', text) @@ plainto_tsquery(:query)
-            """)
+            """
 
             if difficulty:
-                sql += " AND difficulty = :difficulty"
+                sql_query += " AND difficulty = :difficulty"
 
             if tags:
-                sql += " AND tags @> :tags::jsonb"
+                sql_query += " AND tags @> :tags::jsonb"
 
-            sql += " ORDER BY rank DESC"
+            sql_query += " ORDER BY rank DESC"
+            sql = text(sql_query)
 
             params = {"query": query}
             if difficulty:
@@ -77,12 +82,13 @@ class QuestionService:
                 params["tags"] = json.dumps(tags)
 
             text_results = self.db.execute(sql, params).fetchall()
+            print("Keyword results:", text_results)
             return text_results
         except Exception as e:
             self.logger.error(f"Keyword search failed: {e}")
             raise ServiceError("Could not perform keyword search")
 
-    def hybrid_search(self, query: str, difficulty: str | None, tags: list[str] | None, top_n: int = 5):
+    def hybrid_search(self, query: str, difficulty: str | None=None, tags: list[str] | None=None, top_n: int = 5):
         try:
             text_results = self.keyword_search(query, difficulty, tags)
             semantic_results = self.semantic_search(query, top_n)
@@ -142,7 +148,7 @@ class QuestionService:
 
     def get_questions_by_tags(self, tags):
         try:
-            questions = self.db.query(Question).filter(Question.contains(tags)).all()
+            questions = self.db.query(Question).filter(Question.tags.contains(tags)).all()
             return questions
         except Exception as e:
             self.logger.error(f"Get questions by tags failed: {e}")
