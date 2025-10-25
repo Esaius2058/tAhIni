@@ -1,18 +1,12 @@
 from sqlalchemy import Column, Boolean, String, Enum, Text, TIMESTAMP, ForeignKey, Float, func, PrimaryKeyConstraint
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship, sessionmaker
 from pathlib import Path
 from dotenv import load_dotenv
-import sys, os
-import enum
-import uuid
-
-"""BASE_DIR = Path(__file__).resolve().parents[3]
-print("BASE_DIR", BASE_DIR)
-load_dotenv(BASE_DIR / ".env")
-
-sys.path.append(str(BASE_DIR))"""
+import sys, os, enum, uuid
+from datetime import datetime, timedelta
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.db.base import Base
@@ -39,7 +33,7 @@ class Semester(Base):
     __tablename__ = "semester"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
-    start_date = Column(TIMESTAMP, nullable=False)
+    start_date = Column(TIMESTAMP, nullable=False, default=datetime.now())
     end_date = Column(TIMESTAMP, nullable=False)
 
     exams = relationship("Exam", back_populates="semester")
@@ -76,7 +70,7 @@ class Question(Base):
     type = Column(Enum(QuestionType, name="question_type_enum"), nullable=False, default=QuestionType.SHORT_ANSWER)
     text = Column(String)
     difficulty = Column(String)
-    tags = Column(JSONB)
+    tags = Column(MutableList.as_mutable(JSONB), default=list)
     embedding = Column(Vector(1536))
     exam_id = Column(UUID(as_uuid=True), ForeignKey("exam.id"))
 
