@@ -1,25 +1,26 @@
 from sqlalchemy.orm import Session
 from fastapi import APIRouter
 import logging
-from backend.src.db.models import User
-from backend.src.services.questions import ServiceError, NotFoundError, ValidationError
+from backend.src.db.models import User, UserType
+from backend.src.utils.exceptions import ServiceError, NotFoundError
 
 class UserService:
     def __init__(self, db_session: Session):
         self.logger = logging.getLogger("User Service")
-        self.router = APIRouter()
         self.db = db_session
 
-    def create_user(self, name: str, email: str, user_type :str = "student"):
+    def create_user(self, name: str, email: str, pwd: str, user_type: UserType=UserType.STUDENT):
         try:
             user = User(
                 name=name,
                 email=email,
+                password=pwd,
                 type=user_type
             )
             self.db.add(user)
             self.db.commit()
             self.db.refresh(user)
+            return user
         except Exception as e:
             self.db.rollback()
             self.logger.error(f"Failed to create user {name}: {e}")
@@ -49,7 +50,7 @@ class UserService:
             self.logger.error(f"Get user by email failed: {e}")
             raise ServiceError("Could not fetch user by email") from e
 
-    def update_user_type(self, user_id: str, user_type = None, email = None):
+    def update_user_type(self, user_id: str, user_type:UserType | None = None, email = None):
         try:
             user = self.get_user_by_id(user_id)
 
