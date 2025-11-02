@@ -108,7 +108,7 @@ class Submission(Base):
 class SubmissionAnswer(Base):
     __tablename__ = "submission_answer"
     submission_id = Column(UUID(as_uuid=True), ForeignKey("submission.id"))
-    question_id = Column(UUID(as_uuid=True), ForeignKey("question.id"))
+    question_id = Column(UUID(as_uuid=True), ForeignKey("question.id", ondelete="CASCADE"))
     answer = Column(Text, nullable=False)
     is_correct = Column(Boolean, default=False)
 
@@ -133,6 +133,12 @@ class User(Base):
     type = Column(Enum(UserType, name="user_type_enum"), default=UserType.STUDENT)
 
     submissions = relationship("Submission", back_populates="user")
+    uploads = relationship(
+        "Uploads",
+        backref="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
 
 class GradeLog(Base):
     __tablename__ = "gradelog"
@@ -156,7 +162,7 @@ class Feedback(Base):
 class Uploads(Base):
     __tablename__ = "uploads"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"))
     filename = Column(String, nullable=False)
     storage_url = Column(String)
     status = Column(Enum("pending", "processed", "failed", name="upload_status"), default="pending")
@@ -169,4 +175,3 @@ class ExamContent(Base):
     upload_id = Column(UUID(as_uuid=True), ForeignKey("uploads.id"))
     text = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
-
