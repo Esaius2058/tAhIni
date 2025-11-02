@@ -3,6 +3,7 @@ import pytest
 from src.services.storage import StorageService
 from src.db.models import Uploads, User
 from tests.conftest import test_db_session
+from src.utils.exceptions import ServiceError
 
 class DummySupabaseBucket:
     def __init__(self):
@@ -17,7 +18,7 @@ class DummySupabaseBucket:
             raise FileNotFoundError("File not found")
         return self.files[file_name]
 
-    def delete(self, names):
+    def remove(self, names):
         for name in names:
             self.files.pop(name, None)
         return True
@@ -30,11 +31,11 @@ class DummySupabaseBucket:
 
 class DummySupabaseClient:
     def __init__(self):
-        self.storage = self
-        self.bucket = DummySupabaseBucket()
+        self.storage = DummyStorage()
 
+class DummyStorage:
     def from_(self, bucket_name):
-        return self.bucket
+        return DummySupabaseBucket()
 
 
 @pytest.fixture
@@ -95,7 +96,7 @@ def test_upload_file_failure(monkeypatch, storage_service):
 
 def test_download_file_success(storage_service, tmp_path):
     # Prepare mock file in storage
-    storage_service.client.bucket.files["test.txt"] = b"Hello world"
+    storage_service.client.storage.from_(storage_service.bucket).files["test.txt"] = b"Hello world"
     destination = tmp_path / "downloaded.txt"
 
     result_path = storage_service.download_file("test.txt", str(destination))
@@ -110,10 +111,10 @@ def test_download_file_not_found(storage_service, tmp_path):
 
 
 def test_delete_file_success(storage_service, sample_upload, test_db_session):
-    storage_service.client.bucket.files[sample_upload.filename] = b"some data"
+    storage_service.client.storage.from_("uploads").files[sample_upload.filename] = b"some data"
     result = storage_service.delete_file(sample_upload.filename)
 
-    assert "deleted successfully" in result
+    assert result is True
     assert test_db_session.query(Uploads).filter_by(filename=sample_upload.filename).first() is None
 
 
@@ -121,7 +122,7 @@ def test_delete_file_failure(monkeypatch, storage_service):
     def faulty_delete(names):
         raise Exception("Remove failed")
 
-    monkeypatch.setattr(storage_service.client.storage.from_(storage_service.bucket), "delete", faulty_delete)
+    monkeypatch.setattr(storage_service.client.storage.from_(storage_service.bucket), "remove", faulty_delete)
     result = storage_service.delete_file("file_that_fails.txt")
 
     assert result is None
@@ -129,17 +130,20 @@ def test_delete_file_failure(monkeypatch, storage_service):
 
 def test_get_public_url_success(storage_service):
     result = storage_service.get_public_url("somefile.txt")
-    assert isinstance(result, list)
-    assert result[0].startswith("https://storage.example.com/")
+
+    assert result is not None
+    assert "https://storage.example.com/somefile.txt" in result
 
 
 def test_get_public_url_failure(monkeypatch, storage_service):
-    def faulty_url(names):
+    def faulty_url(name):
         raise Exception("URL gen failed")
 
-    monkeypatch.setattr(storage_service.client.storage.from_(storage_service.bucket), "get_public_url", faulty_url)
-    result = storage_service.get_public_url("broken.txt")
-    assert result is None
+    bucket = storage_service.client.storage.from_(storage_service.bucket)
+    monkeypatch.setattr(bucket, "get_public_url", faulty_url)
+
+    with pytest.raises(ServiceError):
+        storage_service.get_public_url("broken.txt")
 
 
 def test_list_files(storage_service, sample_upload):
@@ -164,11 +168,11 @@ def test_list_files_failure(monkeypatch, storage_service):
 
 
 def test_update_upload_status_success(storage_service, sample_upload, test_db_session):
-    result = storage_service.update_upload_status(sample_upload.id, "completed")
+    result = storage_service.update_upload_status(sample_upload.id, "processed")
     updated = test_db_session.query(Uploads).filter_by(id=sample_upload.id).first()
 
     assert result is True
-    assert updated.status == "completed"
+    assert updated.status == "processed"
 
 
 def test_update_upload_status_not_found(storage_service):
