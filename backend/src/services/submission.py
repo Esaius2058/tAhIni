@@ -1,8 +1,9 @@
 import logging
 from sqlalchemy.orm import Session, joinedload
-from backend.src.services.user import UserService
-from backend.src.utils.exceptions import ServiceError, NotFoundError
-from backend.src.db.models import Submission, SubmissionAnswer
+from src.services.questions import QuestionService
+from src.services.user import UserService
+from src.utils.exceptions import ServiceError, NotFoundError
+from src.db.models import Submission, SubmissionAnswer
 
 class SubmissionService:
     def __init__(self, db_session: Session):
@@ -27,8 +28,7 @@ class SubmissionService:
 
     def add_answer(self,  submission_id: str, question_id: str, answer_text: str):
         try:
-            """Save an answer to a question within a submission."""
-            submission = self.db.query(Submission).get(submission_id)
+            submission = self.db.query(Submission).filter(Submission.id == submission_id).first()
             if not submission:
                 raise NotFoundError("Submission not found")
 
