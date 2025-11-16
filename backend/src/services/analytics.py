@@ -4,9 +4,9 @@ from collections import defaultdict
 from numpy.ma.extras import average
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from backend.src.db.models import Submission, GradeLog, User
-from backend.src.services import exam, course, submission, semester
-from backend.src.utils.exceptions import NotFoundError, ServiceError
+from src.db.models import Submission, GradeLog, User, Exam
+from src.services import exam, course, submission, semester
+from src.utils.exceptions import NotFoundError, ServiceError
 
 class AnalyticsService:
     def __init__(self, db_session: Session):
@@ -17,8 +17,12 @@ class AnalyticsService:
         self.course_service = course.CourseService(db_session)
         self.submission_service = submission.SubmissionService(db_session)
 
-    def total_student_score(self, user_id: str, exam_id: str):
+    def student_score_in_exam(self, student_id: str, exam_id: str):
         try:
+            exam_obj = self.db.query(Exam).filter(Exam.id == exam_id).first()
+            if not exam_obj:
+                raise NotFoundError(f"Exam {exam_id} not found")
+
             submission_obj = (
                 self.db.query(Submission)
                 .filter(Submission.user_id == user_id, Submission.exam_id == exam_id)
@@ -27,7 +31,12 @@ class AnalyticsService:
             if not submission_obj or not submission_obj.grade_log:
                 return 0
 
-            return float(submission_obj.grade_log.score)
+            return {
+                "title": exam_obj.title,
+                "subject": exam_obj.subject,
+                "grader": submission_obj.grade_log.grader,
+                "score": float(submission_obj.grade_log.score),
+            }
         except Exception as e:
             self.logger.error(f"Failed to get total score for student {user_id}: {e}")
             raise ServiceError("Failed to get total score for student") from e
@@ -396,4 +405,3 @@ class AnalyticsService:
         except Exception as e:
             self.logger.error(f"Failed to compute student progress for {user_id}: {e}")
             raise ServiceError("Could not compute student progress") from e
-        

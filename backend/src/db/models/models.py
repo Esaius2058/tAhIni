@@ -54,6 +54,31 @@ class Exam(Base):
     semester = relationship("Semester", back_populates="exams")
     questions = relationship("Question", back_populates="exam")
     submissions = relationship("Submission", back_populates="exam")
+    exam_sessions = relationship("ExamSession", back_populates="exam")
+
+class ExamStatus(enum.Enum):
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    SUBMITTED = "submitted"
+    EXPIRED = "expired"
+
+class ExamSession(Base):
+    __tablename__ = "exam_session"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    student_id = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    exam_id = Column(UUID(as_uuid=True), ForeignKey("exam.id"), nullable=False)
+
+    start_time = Column(TIMESTAMP, server_default=func.now())
+    end_time = Column(TIMESTAMP)
+    submitted_at = Column(TIMESTAMP)
+
+    score = Column(String)
+    current_question_index = Column(String)
+    status = Column(Enum(ExamStatus, name="exam_status_enum"), default=ExamStatus.NOT_STARTED)
+
+    student = relationship("User", back_populates="exam_session")
+    exam = relationship("Exam", back_populates="exam_session")
 
 class QuestionType(enum.Enum):
     MCQ = "mcq"
@@ -92,6 +117,7 @@ class Submission(Base):
     __tablename__ = "submission"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     submitted_at = Column(TIMESTAMP, server_default=func.now())
+    exam_session_id = Column(UUID(as_uuid=True), ForeignKey("exam_session.id"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.id"))
     exam_id = Column(UUID(as_uuid=True), ForeignKey("exam.id"))
 
@@ -103,6 +129,7 @@ class Submission(Base):
                             )
     user = relationship("User", back_populates="submissions")
     exam = relationship("Exam", back_populates="submissions")
+    session = relationship("ExamSession")
     answers = relationship("SubmissionAnswer", back_populates="submission", cascade="all, delete-orphan")
 
 class SubmissionAnswer(Base):
@@ -131,6 +158,7 @@ class User(Base):
     email = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
     type = Column(Enum(UserType, name="user_type_enum"), default=UserType.STUDENT)
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
     submissions = relationship("Submission", back_populates="user")
     uploads = relationship(
@@ -139,6 +167,7 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+    exam_sessions = relationship("ExamSession", back_populates="student")
 
 class GradeLog(Base):
     __tablename__ = "gradelog"

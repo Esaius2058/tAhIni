@@ -59,3 +59,17 @@ class AuthService:
         except Exception as e:
             self.logger.error(f"Token verification failed: {e}")
             raise ServiceError("Could not verify token") from e
+
+    def change_password(self, token, new_password: str, old_password: str):
+        try:
+            user = self.verify_token(token)
+            if user.password != self.password_hasher.get_password_hash(old_password):
+                raise AuthError("Wrong password")
+
+            self.user_service.update_user_password(user.id, new_password)
+            return f"Password changed successfully"
+        except AuthError:
+            raise
+        except Exception as e:
+            self.logger.error(f"Password change failed: {e}")
+            raise ServiceError("Could not change password") from e

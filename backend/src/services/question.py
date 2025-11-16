@@ -11,14 +11,14 @@ class QuestionService:
         self.logger = logging.getLogger("Question Service")
         self.db = db_session
 
-    def store_question(self, text: str, tags: list[str], type: QuestionType, bulk: bool = False):
+    def store_question(self, text: str, tags: list[str], question_type: QuestionType, bulk: bool = False):
         try:
             embedding = generate_embedding(text)
             question = Question(
                 text=text,
                 tags=tags,
                 embedding=embedding,
-                type=type,
+                type=question_type,
             )
             if not bulk:
                 self.db.add(question)

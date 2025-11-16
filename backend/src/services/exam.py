@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy.orm import Session
-from src.db.models import Exam, Question
+from src.db.models import Exam, Question, ExamSession, ExamStatus
 from src.utils.exceptions import NotFoundError, ServiceError
 
 class ExamService:
@@ -155,3 +155,42 @@ class ExamService:
                 f"Failed to fetch exam with id: {exam_id} : {e}"
             )
             raise ServiceError(f"Failed to update exam details: {e}")
+
+    def start_exam(self, user_id: str, exam_id: str):
+        try:
+            exam = self.db.query(Exam).filter(Exam.id == exam_id).first()
+            if not exam:
+                raise NotFoundError("Exam not found")
+
+            existing_session = (
+                self.db.query(ExamSession)
+                .filter(ExamSession.exam_id == exam_id, ExamSession.student_id == user_id)
+                .first()
+            )
+
+            if existing_session and existing_session.status == ExamStatus.IN_PROGRESS:
+                return existing_session
+
+            new_session = StudentExam(
+                exam_id=exam_id,
+                student_id=user_id,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow() + parse_duration(exam.duration),
+                status=ExamStatus.IN_PROGRESS
+            )
+
+            self.db.add(new_session)
+            self.db.commit()
+            self.db.refresh(new_session)
+
+            questions = self.db.query(Question).filter(Question.exam_id == exam_id).all()
+
+            return {
+                "session_id": new_session.id,
+                "exam_title": exam.title,
+                "duration": exam.duration,
+                "questions": questions
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to start exam {exam_id} for user {user_id}: {e}")
+            raise ServiceError("Could not start exam")

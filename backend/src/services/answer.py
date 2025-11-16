@@ -52,7 +52,7 @@ class AnswerService:
 
     def list_answers(self, limit: int = 25, offset: int = 0):
         try:
-            answers = self.db.query(Answer).limit(limit).offset(offset)
+            answers = self.db.query(Answer).limit(limit).offset(offset).all()
 
             return [{
                 "answer_id": answer.id,

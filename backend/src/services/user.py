@@ -50,39 +50,77 @@ class UserService:
             self.logger.error(f"Get user by email failed: {e}")
             raise ServiceError("Could not fetch user by email") from e
 
-    def update_user_type(self, user_id: str, user_type:UserType | None = None, email = None):
+    def update_user_type(self, user_id: str, user_type:UserType):
         try:
             user = self.get_user_by_id(user_id)
 
             if user_type:
                 user.type = user_type
 
+            self.db.add(user)
+            self.db.commit()
+            self.db.refresh(user)
+        except NotFoundError:
+            raise
+        except Exception as e:
+            self.db.rollback()
+            self.logger.error(f"Update user failed: {e}")
+            raise ServiceError("Could not update userm type") from e
+
+    def update_user_email(self, user_id: str, email: str):
+        try:
+            user = self.get_user_by_id(user_id)
+
             if email:
                 user.email = email
-        except NotFoundError as nf:
+
+            self.db.add(user)
+            self.db.commit()
+            self.db.refresh(user)
+        except NotFoundError:
+            raise
+        except Exception as e:
+            self.db.rollback()
+            self.logger.error(f"Update user failed: {e}")
+            raise ServiceError("Could not update user email") from e
+
+    def update_user_password(self, user_id: str, new_password: str):
+        try:
+            user = self.db.query(User).filter(User.id == user_id).first()
+
+            if not user:
+                raise NotFoundError("User not found")
+
+            user.password = new_password
+
+            self.db.add(user)
+            self.db.commit()
+            self.db.refresh(user)
+        except NotFoundError:
             raise
         except Exception as e:
             self.db.rollback()
             self.logger.error(f"Update user failed: {e}")
             raise ServiceError("Could not update user") from e
 
+
     def delete_user(self, user_id: str):
-        try:
-            user = self.get_user_by_id(user_id)
+            try:
+                user = self.get_user_by_id(user_id)
 
-            if user:
-                self.db.delete(user)
-                self.db.commit()
-                return True
-            return False
-        except NotFoundError:
-            raise
-        except Exception as e:
-            self.db.rollback()
-            self.logger.error(f"Delete user failed: {e}")
-            raise ServiceError("Could not delete user") from e
+                if user:
+                    self.db.delete(user)
+                    self.db.commit()
+                    return True
+                return False
+            except NotFoundError:
+                raise
+            except Exception as e:
+                self.db.rollback()
+                self.logger.error(f"Delete user failed: {e}")
+                raise ServiceError("Could not delete user") from e
 
-    def list_users(self, role: str = None, limit :int=25, offset=0):
+    def list_users(self, role: UserType = None, limit :int=25, offset=0):
         try:
             query = self.db.query(User)
             if role:

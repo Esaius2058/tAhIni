@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy.orm import Session, joinedload
-from src.services.questions import QuestionService
+from src.services.question import QuestionService
 from src.services.user import UserService
 from src.utils.exceptions import ServiceError, NotFoundError
 from src.db.models import Submission, SubmissionAnswer
@@ -57,7 +57,6 @@ class SubmissionService:
             raise ServiceError("Could not create submission") from e
 
     def get_submission_by_id(self, submission_id: str):
-        """Retrieve submission with answers."""
         try:
             submission = self.db.query(Submission).filter(Submission.id == submission_id).first()
 

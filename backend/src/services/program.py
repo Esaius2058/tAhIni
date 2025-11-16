@@ -47,14 +47,16 @@ class ProgramService:
 
     def list_programs(self, limit: int = 25, offset: int = 0):
         try:
-            programs = self.db.query(Program).limit(limit).offset(offset)
+            programs = self.db.query(Program).limit(limit).offset(offset).all()
 
-            return [{
+            return [
+                {
                 "program_id": program.id,
                 "program_name": program.name,
                 "program_description": program.description,
                 "program_duration": program.duration_years
-            } for program in programs
+                }
+                for program in programs
             ]
         except Exception as e:
             self.logger.error(f"List programs failed: {e}")

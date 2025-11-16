@@ -11,10 +11,10 @@ class CourseService:
         self.logger = logging.getLogger("Course Service")
         self.program_service = ProgramService(db_session)
 
-    def create_course(self, name: str, description: str, instructor_id: str):
+    def create_course(self, course_id: str, name: str, description: str, instructor_id: str):
         try:
             course = Course(
-                id=uuid.uuid4(),
+                id=course_id,
                 name=name,
                 description=description,
                 instructor_id=instructor_id

@@ -2,8 +2,9 @@ import logging
 from typing import List
 from sqlalchemy.orm import Session
 from src.db.base import get_db
-from src.schemas.exam_schema import ExamCreate, ExamBase
+from src.schemas.exam import ExamCreate, ExamBase, ExamStatsRead, ExamUpdate, ExamRead, ExamResultsRead
 from src.services.exam import ExamService
+from src.services.analytics import AnalyticsService
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
@@ -57,7 +58,7 @@ class ExamRouter:
             "/{exam_id}",
             self.update_exam,
             methods=["PATCH"],
-            response_model=ExamRead,
+            response_model=ExamUpdate,
             status_code=status.HTTP_200_OK
         )
         self.router.add_api_route(
@@ -66,6 +67,49 @@ class ExamRouter:
             methods=["DELETE"],
             status_code=status.HTTP_204_NO_CONTENT
         )
+        self.router.add_api_route(
+            "/{exam_id}/questions/{question_id}",
+            self.add_question_to_exam,
+            methods=["POST"],
+            status_code=status.HTTP_201_CREATED
+        )
+        self.router.add_api_route(
+            "/{exam_id}/questions/{question_id}",
+            self.delete_question_from_exam,
+            methods=["DELETE"],
+            status_code=status.HTTP_204_NO_CONTENT
+        )
+        self.router.add_api_route(
+            "/{exam_id}/start",
+            self.start_exam,
+            methods=["POST"],
+            status_code=status.HTTP_201_CREATED
+        )
+        self.router.add_api_route(
+            "/{exam_id}/stats",
+            self.get_exam_statistics,
+            methods=["GET"],
+            response_model=ExamStatsRead,
+            status_code=status.HTTP_200_OK
+        )
+        self.router.add_api_route(
+            "{exam_id}/results/{user_id}",
+            self.get_exam_results,
+            methods=["GET"],
+            response_model=ExamResultsRead,
+            status_code=status.HTTP_200_OK
+        )
+
+    def start_exam(self, exam_id: str, student_id: str, db: Session = Depends(get_db)):
+        try:
+            service = ExamSessionService(db)
+            session = service.start_exam(exam_id, student_id)
+            return session
+        except NotFoundError as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        except Exception as e:
+            self.logger.error(f"Unexpected error while starting exam {exam_id}: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
     def create_exam(self, exam_data: ExamCreate, db: Session=Depends(get_db)):
         try:
@@ -191,45 +235,64 @@ class ExamRouter:
                 detail="Internal server error"
             )
 
-    def get_question_in_exam(self, exam_id: str, question_id: str, db: Session=Depends(get_db)):
+    def add_question_to_exam(self, exam_id: str, question_id: str, db: Session=Depends(get_db)):
         try:
             service = ExamService(db)
-            question = service.get_question_in_exam(exam_id, question_id)
-
-            if not question:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Question {question_id} not found in exam {exam_id}"
-                )
-
+            question = service.add_question_to_exam(question_id, exam_id)
             return question
-
         except HTTPException:
             raise
         except Exception as e:
-            self.logger.error(f"Error fetching question {question_id} in exam {exam_id}: {e}")
+            self.logger.error(f"Failed to add question {question_id} to exam {exam_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error"
             )
 
-    def delete_question_in_exam(self, exam_id: str, question_id: str, db: Session=Depends(get_db)):
+    def delete_question_from_exam(self, exam_id: str, question_id: str, db: Session=Depends(get_db)):
         try:
             service = ExamService(db)
-            success = service.delete_question_in_exam(exam_id, question_id)
+            result = service.delete_question_from_exam(question_id, exam_id)
 
-            if not success:
+            if not result:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Question {question_id} not found in exam {exam_id}"
+                    detail="Question not found in exam"
                 )
 
-            return None  # HTTP_204_NO_CONTENT → no body
-
+            return {"detail": "Question removed from exam"}
         except HTTPException:
             raise
         except Exception as e:
-            self.logger.error(f"Error deleting question {question_id} from exam {exam_id}: {e}")
+            self.logger.error(f"Failed to remove question {question_id} from exam {exam_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error"
+            )
+
+    def get_exam_statistics(self, exam_id: str, db: Session=Depends(get_db)):
+        try:
+            service = AnalyticsService(db)
+            stats = service.exam_statistics(exam_id)
+            return stats
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Failed to get statistics for exam {exam_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error"
+            )
+
+    def get_exam_results(self, exam_id: str, student_id: str, db: Session=Depends(get_db)):
+        try:
+            service = AnalyticsService(db)
+            results = service.student_score_in_exam(student_id, exam_id)
+            return results
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Failed to remove question {question_id} from exam {exam_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error"
