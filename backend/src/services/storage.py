@@ -1,5 +1,6 @@
 import logging, supabase, io
 from src.db.models import Uploads
+from uuid import UUID
 from src.utils.exceptions import ServiceError, NotFoundError
 
 class StorageService:
@@ -9,7 +10,7 @@ class StorageService:
         self.db = db_session
         self.logger = logging.getLogger("Storage Service")
 
-    def upload_file(self, file_obj, file_name: str, user_id: str):
+    def upload_file(self, file_obj, file_name: str, user_id: UUID):
         try:
             bucket = self.client.storage.from_(self.bucket)
             bucket.upload(file_name, file_obj)
@@ -64,7 +65,7 @@ class StorageService:
             self.logger.error(f"Error getting public URL for '{file_name}': {e}")
             raise ServiceError("Could not generate public URL") from e
 
-    def list_files(self, user_id: str = None):
+    def list_files(self, user_id: UUID = None):
         try:
             query = self.db.query(Uploads)
             if user_id:
@@ -74,7 +75,7 @@ class StorageService:
             self.logger.error(f"Failed to list files: {e}")
             return None
 
-    def update_upload_status(self, upload_id: str, status: str):
+    def update_upload_status(self, upload_id: UUID, status: str):
         try:
             upload = self.db.query(Uploads).get(upload_id)
             if not upload:

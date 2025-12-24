@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from fastapi import APIRouter
 import logging
-from backend.src.db.models import User, UserType
-from backend.src.utils.exceptions import ServiceError, NotFoundError
+from uuid import UUID
+from src.db.models import User, UserType
+from src.utils.exceptions import ServiceError, NotFoundError
 
 class UserService:
     def __init__(self, db_session: Session):
@@ -26,7 +27,7 @@ class UserService:
             self.logger.error(f"Failed to create user {name}: {e}")
             raise ServiceError("Could not create user") from e
 
-    def get_user_by_id(self, user_id: str):
+    def get_user_by_id(self, user_id: UUID):
         try:
             user = self.db.query(User).filter(User.id == user_id).first()
             if not user:
@@ -42,15 +43,13 @@ class UserService:
         try:
             user = self.db.query(User).filter(User.email == email).first()
             if not user:
-                raise NotFoundError(f"User with email {email} not found")
+                self.logger.error(f"User with email {email} not found")
             return user
-        except NotFoundError:
-            raise
         except Exception as e:
             self.logger.error(f"Get user by email failed: {e}")
             raise ServiceError("Could not fetch user by email") from e
 
-    def update_user_type(self, user_id: str, user_type:UserType):
+    def update_user_type(self, user_id: UUID, user_type:UserType):
         try:
             user = self.get_user_by_id(user_id)
 
@@ -67,7 +66,7 @@ class UserService:
             self.logger.error(f"Update user failed: {e}")
             raise ServiceError("Could not update userm type") from e
 
-    def update_user_email(self, user_id: str, email: str):
+    def update_user_email(self, user_id: UUID, email: str):
         try:
             user = self.get_user_by_id(user_id)
 
@@ -84,7 +83,7 @@ class UserService:
             self.logger.error(f"Update user failed: {e}")
             raise ServiceError("Could not update user email") from e
 
-    def update_user_password(self, user_id: str, new_password: str):
+    def update_user_password(self, user_id: UUID, new_password: str):
         try:
             user = self.db.query(User).filter(User.id == user_id).first()
 
@@ -104,7 +103,7 @@ class UserService:
             raise ServiceError("Could not update user") from e
 
 
-    def delete_user(self, user_id: str):
+    def delete_user(self, user_id: UUID):
             try:
                 user = self.get_user_by_id(user_id)
 

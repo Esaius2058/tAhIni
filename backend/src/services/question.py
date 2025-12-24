@@ -1,5 +1,6 @@
 import json
 import logging
+from uuid import UUID
 from sqlalchemy import text
 from src.utils.embeddings import generate_embedding
 from src.db.models import Question, QuestionType
@@ -134,7 +135,7 @@ class QuestionService:
     def sort_by_score(self, results: list[dict]) -> list[dict]:
         return sorted(results, key=lambda r: r["score"], reverse=True)
 
-    def get_question_by_id(self, question_id):
+    def get_question_by_id(self, question_id: UUID):
         try:
             question = self.db.query(Question).filter_by(id=question_id).first()
             if not question:
@@ -172,7 +173,7 @@ class QuestionService:
             self.logger.error(f"List questions failed: {e}")
             raise ServiceError("Could not list questions")
 
-    def update_question(self, question_id: str, new_difficulty = None, tags = None, question_type = None):
+    def update_question(self, question_id: UUID, new_difficulty = None, tags = None, question_type = None):
         try:
             question = self.db.query(Question).filter_by(id=question_id).first()
 
@@ -197,7 +198,7 @@ class QuestionService:
             self.logger.error(f"Update question failed: {e}")
             raise ServiceError("Could not update question")
 
-    def delete_question(self, question_id):
+    def delete_question(self, question_id: UUID):
         try:
             question = self.db.query(Question).filter(Question.id == question_id).first()
             if question:

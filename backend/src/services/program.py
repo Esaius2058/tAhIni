@@ -1,7 +1,8 @@
 import logging
+from uuid import UUID
 from sqlalchemy.orm import Session
-from backend.src.db.models import Program
-from backend.src.services.questions import ServiceError, NotFoundError
+from src.db.models import Program
+from src.services.question import ServiceError, NotFoundError
 
 class ProgramService:
     def __init__(self, db_session: Session):
@@ -19,7 +20,7 @@ class ProgramService:
             self.logger.error(f"Create program failed: {e}")
             raise ServiceError("Could not create program") from e
 
-    def get_program(self, program_id: str):
+    def get_program(self, program_id: UUID):
         try:
             program = self.db.query(Program).filter(Program.id == program_id).first()
             if not program:
@@ -31,7 +32,7 @@ class ProgramService:
             self.logger.error(f"Get program failed: {e}")
             raise ServiceError("Could not fetch program") from e
 
-    def update_program(self, program_id: str, **kwargs):
+    def update_program(self, program_id: UUID, **kwargs):
         try:
             program = self.get_program(program_id)
             for key, value in kwargs.items():
@@ -62,7 +63,7 @@ class ProgramService:
             self.logger.error(f"List programs failed: {e}")
             raise ServiceError("Could not list programs") from e
 
-    def delete_program(self, program_id: str):
+    def delete_program(self, program_id: UUID):
         try:
             program = self.get_program(program_id)
             self.db.delete(program)

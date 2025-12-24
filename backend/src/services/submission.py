@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
 from src.services.question import QuestionService
 from src.services.user import UserService
@@ -12,7 +13,7 @@ class SubmissionService:
         self.user_service = UserService(db_session)
         self.question_service = QuestionService(db_session)
 
-    def create_submission(self, user_id: str, exam_id: str):
+    def create_submission(self, user_id: UUID, exam_id: UUID):
         try:
             submission = Submission(
                 user_id=user_id,
@@ -26,7 +27,7 @@ class SubmissionService:
             self.logger.error(f"Failed to create submission: {e}")
             raise ServiceError("Could not create submission") from e
 
-    def add_answer(self,  submission_id: str, question_id: str, answer_text: str):
+    def add_answer(self,  submission_id: UUID, question_id: UUID, answer_text: str):
         try:
             submission = self.db.query(Submission).filter(Submission.id == submission_id).first()
             if not submission:
@@ -56,7 +57,7 @@ class SubmissionService:
             self.logger.error(f"Failed to create submission: {e}")
             raise ServiceError("Could not create submission") from e
 
-    def get_submission_by_id(self, submission_id: str):
+    def get_submission_by_id(self, submission_id: UUID):
         try:
             submission = self.db.query(Submission).filter(Submission.id == submission_id).first()
 
@@ -90,7 +91,7 @@ class SubmissionService:
             self.logger.error(f"Failed to get submission: {e}")
             raise ServiceError("Could not fetch submission") from e
 
-    def _base_submission_query(self, exam_id: str, detailed: bool = False):
+    def _base_submission_query(self, exam_id: UUID, detailed: bool = False):
         query = self.db.query(Submission).filter(Submission.exam_id == exam_id)
 
         if detailed:
@@ -101,7 +102,7 @@ class SubmissionService:
             )
         return query
 
-    def list_exam_submissions_basic(self, exam_id: str, limit: int = 25, offset: int = 0):
+    def list_exam_submissions_basic(self, exam_id: UUID, limit: int = 25, offset: int = 0):
         try:
             submissions = (
                 self._base_submission_query(exam_id, detailed=False)
@@ -123,7 +124,7 @@ class SubmissionService:
             self.logger.error(f"Failed to fetch basic submissions for exam {exam_id}: {e}")
             raise ServiceError("Could not fetch basic submissions") from e
 
-    def list_exam_submissions_detailed(self, exam_id: str, limit: int = 25, offset: int = 0):
+    def list_exam_submissions_detailed(self, exam_id: UUID, limit: int = 25, offset: int = 0):
         try:
             submissions = (
                 self._base_submission_query(exam_id, detailed=True)

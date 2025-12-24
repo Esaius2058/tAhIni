@@ -1,8 +1,9 @@
 import logging
-import time
+from datetime import datetime
 from collections import defaultdict
 from numpy.ma.extras import average
 from sqlalchemy import func
+from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
 from src.db.models import Submission, GradeLog, User, Exam
 from src.services import exam, course, submission, semester
@@ -17,7 +18,7 @@ class AnalyticsService:
         self.course_service = course.CourseService(db_session)
         self.submission_service = submission.SubmissionService(db_session)
 
-    def student_score_in_exam(self, student_id: str, exam_id: str):
+    def student_score_in_exam(self, student_id: UUID, exam_id: UUID):
         try:
             exam_obj = self.db.query(Exam).filter(Exam.id == exam_id).first()
             if not exam_obj:
@@ -25,7 +26,7 @@ class AnalyticsService:
 
             submission_obj = (
                 self.db.query(Submission)
-                .filter(Submission.user_id == user_id, Submission.exam_id == exam_id)
+                .filter(Submission.user_id == student_id, Submission.exam_id == exam_id)
                 .first()
             )
             if not submission_obj or not submission_obj.grade_log:
@@ -41,7 +42,7 @@ class AnalyticsService:
             self.logger.error(f"Failed to get total score for student {user_id}: {e}")
             raise ServiceError("Failed to get total score for student") from e
 
-    def exam_pass_rate(self, exam_id: str):
+    def exam_pass_rate(self, exam_id: UUID):
         try:
             exam_obj = self.exam_service.get_exam_by_id(exam_id)
             if not exam_obj:
@@ -66,7 +67,7 @@ class AnalyticsService:
             self.logger.error(f"Failed to compute pass rate for exam {exam_id}: {e}")
             raise ServiceError("Could not compute pass rate") from e
 
-    def exam_statistics(self, exam_id: str):
+    def exam_statistics(self, exam_id: UUID):
         try:
             exam_obj = self.exam_service.get_exam_by_id(exam_id)
             if not exam_obj:
@@ -96,7 +97,7 @@ class AnalyticsService:
             self.logger.error(f"Failed to compute exam statistics for exam {exam_id}: {e}")
             raise ServiceError("Could not compute exam statistics") from e
 
-    def course_performance_per_semester(self, course_id: str, start_date: datetime, end_date: datetime):
+    def course_performance_per_semester(self, course_id: UUID, start_date: datetime, end_date: datetime):
         try:
             if not isinstance(start_date, datetime) or not isinstance(end_date, datetime):
                 raise TypeError("start_date and end_date must be datetime objects")
@@ -144,7 +145,7 @@ class AnalyticsService:
             raise ServiceError("Could not compute course performance") from e
 
 
-    def course_performance_per_semester_sql(self, course_id: str, start_date: datetime, end_date: datetime):
+    def course_performance_per_semester_sql(self, course_id: UUID, start_date: datetime, end_date: datetime):
         try:
             semester = self.semester_service.get_semester_by_date(start_date, end_date)
             exam_ids = [
@@ -242,7 +243,7 @@ class AnalyticsService:
         cumulative_gpa = total_weighted_gpa / total_courses if total_courses > 0 else 0
         return round(cumulative_gpa, 2)
 
-    def student_performance_per_semester(self, student_id: str, start_date: datetime, end_date: datetime):
+    def student_performance_per_semester(self, student_id: UUID, start_date: datetime, end_date: datetime):
         try:
             semester = self.semester_service.get_semester_by_date(start_date, end_date)
             query = (
@@ -283,7 +284,7 @@ class AnalyticsService:
             self.logger.error(f"Failed to compute student performance: {e}")
             raise ServiceError("Could not compute student performance") from e
 
-    def student_performance_per_course(self, student_id: str, start_date: datetime, end_date: datetime):
+    def student_performance_per_course(self, student_id: UUID, start_date: datetime, end_date: datetime):
         try:
             semester = self.semester_service.get_semester_by_date(start_date, end_date)
 
@@ -311,7 +312,7 @@ class AnalyticsService:
             self.logger.error(f"Failed to compute student performance for semester: {e}")
             raise ServiceError("Could not compute student performance") from e
 
-    def student_progress(self, user_id: str):
+    def student_progress(self, user_id: UUID):
         try:
             results = (
                 query(Exam)

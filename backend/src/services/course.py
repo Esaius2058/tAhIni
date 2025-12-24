@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from backend.src.db.models import Course, Exam, User
-from backend.src.services.program import ProgramService
-from backend.src.utils.exceptions import ServiceError, NotFoundError
+from src.db.models import Course, Exam, User
+from src.services.program import ProgramService
+from src.utils.exceptions import ServiceError, NotFoundError
 import logging
-import uuid
+from uuid import UUID
 
 class CourseService:
     def __init__(self, db_session: Session):
@@ -11,7 +11,7 @@ class CourseService:
         self.logger = logging.getLogger("Course Service")
         self.program_service = ProgramService(db_session)
 
-    def create_course(self, course_id: str, name: str, description: str, instructor_id: str):
+    def create_course(self, course_id: UUID, name: str, description: str, instructor_id: UUID):
         try:
             course = Course(
                 id=course_id,
@@ -28,7 +28,7 @@ class CourseService:
             self.logger.error(f"Create course failed: {e}")
             raise ServiceError("Could not create course") from e
 
-    def get_course(self, course_id: str):
+    def get_course(self, course_id: UUID):
         try:
             course = self.db.query(Course).filter(Course.id == course_id).first()
             if not course:
@@ -40,7 +40,7 @@ class CourseService:
             self.logger.error(f"Get course failed: {e}")
             raise ServiceError("Could not fetch course") from e
 
-    def update_course(self, course_id: str, data: dict):
+    def update_course(self, course_id: UUID, data: dict):
         try:
             course = self.get_course(course_id)
             for key, value in data.items():
@@ -54,7 +54,7 @@ class CourseService:
             self.logger.error(f"Update course failed: {e}")
             raise ServiceError("Could not update course") from e
 
-    def delete_course(self, course_id: str):
+    def delete_course(self, course_id: UUID):
         try:
             course = self.get_course(course_id)
             self.db.delete(course)
@@ -79,7 +79,7 @@ class CourseService:
             self.logger.error(f"List courses failed: {e}")
             raise ServiceError("Could not list courses") from e
 
-    def assign_exam(self, course_id: str, exam_id: str):
+    def assign_exam(self, course_id: UUID, exam_id: UUID):
         try:
             course = self.get_course(course_id)
             exam = self.db.query(Exam).filter(Exam.id == exam_id).first()
