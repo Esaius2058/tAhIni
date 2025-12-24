@@ -1,22 +1,23 @@
-import os, sys
+import sys, os
 from pathlib import Path
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from dotenv import load_dotenv
+from config import settings
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+"""BASE_DIR = Path(__file__).resolve().parents[1]
 print("BASE_DIR", BASE_DIR)
 load_dotenv(BASE_DIR / ".env")
+"""
 
-sys.path.append(str(BASE_DIR))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.db.base import Base
-from src.db import models
+from src.db.models import *
 
 config = context.config
 
-db_url = os.getenv("DATABASE_URL")
+db_url = settings.DATABASE_URL
 if not db_url:
     raise RuntimeError("DATABASE_URL not set in .env")
 
