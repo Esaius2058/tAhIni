@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from uuid import UUID
 from datetime import datetime
 from src.db.models import QuestionType
 
@@ -14,7 +15,7 @@ class QuestionCreate(QuestionBase):
     pass
 
 class QuestionRead(QuestionBase):
-    id: str
+    id: UUID
     created_at: Optional[datetime] = None
 
     class Config:

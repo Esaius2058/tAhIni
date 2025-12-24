@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
 from src.db.models import UserType
+from uuid import UUID
 from typing import Optional
 
 class UserBase(BaseModel):
@@ -12,7 +13,7 @@ class UserBase(BaseModel):
         orm_mode = True
 
 class UserRead(UserBase):
-    id: str
+    id: UUID
     type: UserType
     created_at: Optional[datetime]
 

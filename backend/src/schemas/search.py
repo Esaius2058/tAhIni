@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from uuid import UUID
 
 class SearchRequest(BaseModel):
     query: str
@@ -7,6 +8,6 @@ class SearchRequest(BaseModel):
     difficulty: str | None = None
 
 class SearchResponse(BaseModel):
-    id: str
+    id: UUID
     text: str
     tags: list[str] | None = None
