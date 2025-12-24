@@ -1,7 +1,7 @@
 import pytest
 from src.services.submission import SubmissionService
 from src.services.user import UserService
-from src.services.questions import QuestionService
+from src.services.question import QuestionService
 from src.utils.exceptions import ServiceError, NotFoundError
 from src.db.models import Submission, SubmissionAnswer, QuestionType, Exam, UserType
 from tests.conftest import test_db_session

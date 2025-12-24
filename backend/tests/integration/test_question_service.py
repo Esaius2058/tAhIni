@@ -2,7 +2,7 @@ import os, pytest
 from src.utils.exceptions import NotFoundError
 from src.utils.embeddings import generate_embedding
 from src.db.models import Question, QuestionType
-from src.services.questions import QuestionService
+from src.services.question import QuestionService
 from tests.conftest import test_db_session
 
 @pytest.fixture

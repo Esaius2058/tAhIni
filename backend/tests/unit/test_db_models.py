@@ -1,10 +1,12 @@
 import uuid
-import pytest
-from mako.testing.helpers import result_lines
+import pytest, sys, os
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
-from src.db.base import Base, engine
-from src.db.models.exam import Exam, Question, User, Submission, Feedback, GradeLog
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+from src.db.database import engine
+from src.db.base import Base
+from src.db.models.models import Exam, Question, User, UserType, Submission, Feedback, GradeLog
 
 # set up a fresh test database session
 Session = sessionmaker(bind=engine)
@@ -80,7 +82,9 @@ def test_fk_constraint_on_question_exam_id(session):
 def test_insert_submission_and_user(session):
     user = User(
         id=uuid.uuid4(),
-        type="student"
+        name="Flynn",
+        email="flynn@americazzz.com",
+        password="hello world"
     )
     session.add(user)
     session.commit()
@@ -120,14 +124,19 @@ def test_invalid_submission_fk(session):
 def test_insert_feedback_and_gradelog(session):
     user = User(
         id=uuid.uuid4(),
-        type="teacher"
+        name="Flynn",
+        email="flynn@americazzz.com",
+        password="hello world",
     )
     session.add(user)
     session.commit()
 
     user2 = User(
         id=uuid.uuid4(),
-        type="teacher"
+        name="Lorraine",
+        email="lorraine@gmail.com",
+        password="hello world",
+        type=UserType.INSTRUCTOR
     )
     session.add(user2)
     session.commit()
