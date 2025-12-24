@@ -13,7 +13,7 @@ from src.services.user import UserService
 class AuthRouter:
     def __init__(self):
         self.logger = logging.getLogger("Auth Router")
-        self.oauth2_scheme = OAuth2PasswordBearer(token_url="/v1/auth/login")
+        self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
         self.router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 
         self.router.add_api_route(
@@ -51,7 +51,7 @@ class AuthRouter:
     ):
         service = self.get_auth_service(db)
         try:
-            user = service.register_user(payload.name, payload.email, payload.password, payload.role)
+            user = service.register_user(payload.name, payload.email, payload.password, payload.type)
             return user
         except Exception as e:
             self.logger.error(f"Failed to register user: {e}")

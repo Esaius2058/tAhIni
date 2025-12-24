@@ -1,5 +1,6 @@
 import logging
 from typing import List
+from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from src.db.database import get_db
@@ -65,7 +66,7 @@ class UserRouter:
             methods=["GET"]
         )
 
-    def get_user_by_id(self, user_id: str, db: Session=Depends(get_db)):
+    def get_user_by_id(self, user_id: UUID, db: Session=Depends(get_db)):
         service = UserService(db)
         try:
             user = service.get_user_by_id(user_id)
@@ -97,7 +98,7 @@ class UserRouter:
                 detail="Internal server error"
             )
 
-    def update_user_type(self, user_id: str, payload: UpdateUserTypeRequest,db: Session=Depends(get_db)):
+    def update_user_type(self, user_id: UUID, payload: UpdateUserTypeRequest,db: Session=Depends(get_db)):
         service = UserService(db)
         try:
             updated_user = service.update_user_type(user_id, payload.type)
@@ -109,7 +110,7 @@ class UserRouter:
                 detail="Internal server error"
             )
 
-    def update_user_email(self, user_id: str, payload: UpdateEmailRequest,db: Session=Depends(get_db)):
+    def update_user_email(self, user_id: UUID, payload: UpdateEmailRequest,db: Session=Depends(get_db)):
         service = UserService(db)
         try:
             updated_user = service.update_user_email(user_id, payload.email)

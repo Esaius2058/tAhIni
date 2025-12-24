@@ -1,7 +1,8 @@
 import logging
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
+from uuid import UUID
 from src.db.database import get_db
 from src.services.submission import SubmissionService
 from src.schemas.submission import (
@@ -74,7 +75,7 @@ class SubmissionRouter:
             self.logger.error(f"Failed to add answer: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    def get_submission(self, submission_id: str, db: Session = Depends(get_db)):
+    def get_submission(self, submission_id: UUID, db: Session = Depends(get_db)):
         service = SubmissionService(db)
         try:
             submission = service.get_submission_by_id(submission_id)
@@ -84,7 +85,7 @@ class SubmissionRouter:
             raise HTTPException(status_code=500, detail="Internal server error")
 
     def list_exam_submissions_basic(
-            self, exam_id: str, limit: int = Query(25, ge=1), offset: int = Query(0, ge=0),
+            self, exam_id: UUID, limit: int = Query(25, ge=1), offset: int = Query(0, ge=0),
             db: Session = Depends(get_db)
     ):
         service = SubmissionService(db)
@@ -95,7 +96,7 @@ class SubmissionRouter:
             raise HTTPException(status_code=500, detail="Internal server error")
 
     def list_exam_submissions_detailed(
-            self, exam_id: str, limit: int = Query(25, ge=1), offset: int = Query(0, ge=0),
+            self, exam_id: UUID, limit: int = Query(25, ge=1), offset: int = Query(0, ge=0),
             db: Session = Depends(get_db)
     ):
         service = SubmissionService(db)

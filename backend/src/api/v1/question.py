@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from uuid import UUID
 from src.db.database import get_db
 from src.services.question import QuestionService
 from src.schemas.question import (
@@ -97,7 +98,7 @@ class QuestionRouter:
             self.logger.error(f"Hybrid search failed: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    def get_question_by_id(self, question_id: str, db: Session = Depends(get_db)):
+    def get_question_by_id(self, question_id: UUID, db: Session = Depends(get_db)):
         service = QuestionService(db)
         try:
             question = service.get_question_by_id(question_id)
@@ -106,7 +107,7 @@ class QuestionRouter:
             self.logger.error(f"Failed to fetch question {question_id}: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    def update_question(self, question_id: str, payload: QuestionUpdate, db: Session = Depends(get_db)):
+    def update_question(self, question_id: UUID, payload: QuestionUpdate, db: Session = Depends(get_db)):
         service = QuestionService(db)
         try:
             updated = service.update_question(
@@ -122,7 +123,7 @@ class QuestionRouter:
             self.logger.error(f"Failed to update question {question_id}: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    def delete_question(self, question_id: str, db: Session = Depends(get_db)):
+    def delete_question(self, question_id: UUID, db: Session = Depends(get_db)):
         service = QuestionService(db)
         try:
             success = service.delete_question(question_id)

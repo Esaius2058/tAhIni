@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Query
 from sqlalchemy.orm import Session
 from src.db.database import get_db
-from src.schemas.storage_schema import (
+from src.schemas.storage import (
     UploadResponse,
     FileItem,
     DeleteResponse,

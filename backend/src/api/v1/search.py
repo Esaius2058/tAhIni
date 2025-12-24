@@ -1,9 +1,9 @@
 import logging
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
-from backend.src.db.base import get_db
-from backend.src.services.questions import QuestionService
-from backend.src.schemas.search import SearchResponse, SearchRequest
+from src.db.database import get_db
+from src.services.question import QuestionService
+from src.schemas.search import SearchResponse, SearchRequest
 
 class SearchRouter:
     def __init__(self, db_session: Session = Depends(get_db)):
