@@ -1,6 +1,7 @@
 import os
-from backend.config import settings
-from datetime import datetime, timedelta
+from uuid import UUID
+from config import settings
+from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from fastapi import Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -14,13 +15,29 @@ class JWTHandler:
         self.algorithm = algorithm
         self.expire_minutes = expire_minutes
         self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login")
+        self.session_ttl_minutes = 180
 
     def create_access_token(self, data: dict) -> str:
         to_encode = data.copy()
-        expire = datetime.now() + timedelta(minutes=self.expire_minutes)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=self.expire_minutes)
         to_encode.update({"exp": expire})
         token = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return token
+
+    def create_candidate_jwt(
+            self,
+            exam_session_id: UUID,
+            submission_id: UUID,
+            exam_id: UUID,
+    ) -> str:
+        payload = CandidateExamToken(
+            exam_session_id=exam_session_id,
+            submission_id=submission_id,
+            exam_id=exam_id,
+            exp=datetime.now(datetime.UTC) + timedelta(minutes=self.session_ttl_minutes),
+        )
+
+        return jwt.encode(payload.model_dump(), self.secret_key, self.algorithm)
 
     def verify_token(self, token: str) -> dict:
         try:
