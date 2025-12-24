@@ -1,5 +1,7 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
 
 class Settings(BaseSettings):
     AIVEN_DATABASE_URL: str
@@ -16,9 +18,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    DB_VENDOR: str
 
-    class Config:
-        BASE_DIR = Path(__file__).resolve().parent
-        env_file = BASE_DIR / ".env"
+    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env")
 
 settings = Settings()
