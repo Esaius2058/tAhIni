@@ -1,13 +1,13 @@
-export interface CandidateSessionResponse {
-  session: {
-    id: string;
-    status: "IN_PROGRESS" | "TIMED_OUT" | "SUBMITTED";
-    started_at: string;
-    ends_at: string;
-  };
-  exam: {
-    id: string;
-    title: string;
-    duration_minutes: number;
-  };
-}
+export type CandidateExamSession = {
+  id: string;
+  exam_id: string;
+
+  candidate_name: string;
+  candidate_ref?: string | null;
+
+  started_at: string;   // ISO
+  ends_at: string;      // ISO
+  submitted_at?: string | null;
+
+  status:"not_started" | "in_progress" | "submitted" | "locked" | "expired" | "completed";
+};

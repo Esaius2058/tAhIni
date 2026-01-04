@@ -25,3 +25,9 @@ export interface AutosavePayload {
 export interface AutosaveResponse {
   status: "saved";
 }
+
+export interface ExamSessionSummary {
+  total: number;
+  answered: number;
+  unanswered: number;
+}
