@@ -8,6 +8,11 @@ import InstructorExamListPage from "./pages/instructor/exams";
 import NewExamPage from "./pages/instructor/new-exam";
 import SingleExamPage from "./pages/instructor/exam-details";
 import InstructorQuestionsPage from "./pages/instructor/questions";
+import ExamInstructionsPage from "./pages/student/instructions";
+import TakeExamPage from "./pages/student/takeExam";
+import SubmitExamPage from "./pages/student/submitExam";
+import ExamCompletedPage from "./pages/student/completeExam";
+import LockedAttempt from "./pages/student/lockedAttempt";
 
 const MainRoutes = () => {
   const routes = [
@@ -26,11 +31,6 @@ const MainRoutes = () => {
         {
           path: "signup",
           element: <Landing />,
-        },
-        {
-          //path: "exams/:examId/entry" => to be used for links
-          path: "exams/candidate/entry", //for testing
-          element: <CandidateLogin />
         },
         {
           element: <ProtectedRoute />,
@@ -59,6 +59,46 @@ const MainRoutes = () => {
                   path: "exams/:examId/questions",
                   element: <InstructorQuestionsPage />,
                 },
+              ],
+            },
+            {
+              path: "exams/:examId",
+              children: [
+                // ENTRY POINTS
+                {
+                  //path: "/start" => to be used for links
+                  path: "start",
+                  element: <CandidateLogin />, // name + examCode
+                },
+                {
+                  path: "start/student",
+                  element: (
+                    <ProtectedRoute>
+                      <StudentExamEntry /> // no name, user already known
+                    </ProtectedRoute>
+                  ),
+                },
+                // SHARED FLOW
+                {
+                  path: "instructions",
+                  element: <ExamInstructionsPage />,
+                },
+                {
+                  path: "session/:sessionId",
+                  element: <TakeExamPage />,
+                },
+                {
+                  path: "submit",
+                  element: <SubmitExamPage />,
+                },
+                {
+                  path: "completed",
+                  element: <ExamCompletedPage />,
+                },
+                {
+                  path: "locked",
+                  element: <LockedAttempt />,
+                }
               ],
             },
           ],
