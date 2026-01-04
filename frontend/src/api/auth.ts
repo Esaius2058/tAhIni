@@ -1,4 +1,4 @@
-import api from "../lib/axios";
+import api from "../lib/axiosApi";
 import { LoginUserRequest, RegisterUserRequest } from "../types/auth";
 
 const registerUserApi = async (userData: RegisterUserRequest) => {

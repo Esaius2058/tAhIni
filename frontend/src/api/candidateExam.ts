@@ -1,13 +1,17 @@
-import api from "../lib/axios";
+import examApi from "@/lib/axiosExamApi";
 import {
   EnterExamPayload,
   StartExamPayload,
   EnterExamResponse,
   StartExamResponse,
 } from "../forms/auth/candidateLogin.types";
-import { CandidateSessionResponse } from "@/types/candidateSession";
+import { CandidateExamSession } from "@/types/candidateSession";
 import { Question } from "@/types/question";
-import { AutosavePayload, AutosaveResponse } from "@/types/examSession";
+import {
+  AutosavePayload,
+  AutosaveResponse,
+  ExamSessionSummary,
+} from "@/types/examSession";
 
 /**
  * Enter exam using exam code + candidate name
@@ -16,8 +20,8 @@ const enterExamApi = async (
   payload: EnterExamPayload
 ): Promise<EnterExamResponse> => {
   try {
-    const response = await api.post<EnterExamResponse>(
-      "/candidate/enter-exam",
+    const response = await examApi.post<EnterExamResponse>(
+      "/candidate/exam/enter",
       {
         exam_code: payload.examCode,
         candidate_name: payload.candidateName,
@@ -38,8 +42,8 @@ const startExamApi = async (
   payload: StartExamPayload
 ): Promise<StartExamResponse> => {
   try {
-    const response = await api.post<StartExamResponse>(
-      "/candidate/start-exam",
+    const response = await examApi.post<StartExamResponse>(
+      "/candidate/exam/start",
       {
         exam_id: payload.examId,
         candidate_name: payload.candidateName,
@@ -53,15 +57,10 @@ const startExamApi = async (
   }
 };
 
-const getCandidateExamSession = async (): Promise<CandidateSessionResponse> => {
+const getCandidateExamSession = async (): Promise<CandidateExamSession> => {
   try {
-    const response = await axios.get<CandidateSessionResponse>(
-      "/candidate/session/current",
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("candidate_token")}`,
-        },
-      }
+    const response = await examApi.get<CandidateExamSession>(
+      "/candidate/exam-session/current"
     );
     return response.data;
   } catch (error) {
@@ -70,15 +69,10 @@ const getCandidateExamSession = async (): Promise<CandidateSessionResponse> => {
   }
 };
 
-const getSessionQuestions = async (sessionId: string): Promise<Question[]> => {
+const getSessionQuestions = async (): Promise<Question[]> => {
   try {
-    const response = await axios.get<Question[]>(
-      `/candidate/exam-sessions/${sessionId}/questions`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("candidate_token")}`,
-        },
-      }
+    const response = await examApi.get<Question[]>(
+      "/candidate/exam-session/questions"
     );
     return response.data;
   } catch (error) {
@@ -91,24 +85,35 @@ const autosaveAnswer = async (
   payload: AutosavePayload
 ): Promise<AutosaveResponse> => {
   try {
-    const res = await axios.post<AutosaveResponse>(
-      '/exam-sessions/autosave',
+    const response = await examApi.post<AutosaveResponse>(
+      "/candidate/exam-session/autosave",
       {
         question_id: payload.question_id,
         answer: payload.answer,
       }
     );
 
-    return res.data;
+    return response.data;
   } catch (error) {
     console.error("Autosave answer error:", error);
     throw error;
   }
 };
 
-const submitExam = async (sessionId: string): Promise<void> => {
+const submitExam = async (): Promise<string> => {
   try {
-    await axios.post(`/exam-sessions/${sessionId}/submit`);
+    const response = await examApi.post<string>("/candidate/exam-session/submit");
+    return response.data;
+  } catch (error) {
+    console.error("Submit exam error:", error);
+    throw error;
+  }
+};
+
+const getSubmissionSummary = async (): Promise<ExamSessionSummary> => {
+  try {
+    const response = await examApi.get<ExamSessionSummary>("/candidate/exam-session/summary");
+    return response.data;
   } catch (error) {
     console.error("Submit exam error:", error);
     throw error;
@@ -122,4 +127,5 @@ export {
   getSessionQuestions,
   autosaveAnswer,
   submitExam,
+  getSubmissionSummary,
 };

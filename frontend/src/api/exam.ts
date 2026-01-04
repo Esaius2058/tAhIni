@@ -1,5 +1,5 @@
 // src/api/exam.ts
-import api from "../lib/axios";
+import api from "../lib/axiosApi";
 import {
   ExamCreate,
   ExamRead,
