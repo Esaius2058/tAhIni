@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { setAuthToken } from "@/lib/axios";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { enterExamApi, startExamApi } from "@/api/candidateExam";
@@ -24,26 +23,11 @@ export default function CandidateLogin() {
       // STEP 1: Enter exam
       const enterResData = await enterExamApi(values);
 
-      // STEP 2: Start exam
-      const startRes = await startExamApi({
-        examId: enterResData.exam_id, 
-        candidateName: values.candidateName,
-      });
-
       sessionStorage.setItem("examId", enterResData.exam_id);
+      sessionStorage.setItem("examTitle", enterResData.title);
+      sessionStorage.setItem("examDuration", String(enterResData.duration_minutes));
       sessionStorage.setItem("candidateName", values.candidateName);
-      localStorage.setItem("candidate_token", startRes.token);
-      setAuthToken(startRes.token);
-      sessionStorage.setItem("candidateExamToken", startRes.token);
-      sessionStorage.setItem("sessionId", startRes.session_id);
-      sessionStorage.setItem("candidateRef", startRes.candidate_ref);
-
-      /*
-      if (startRes.data.locked) {
-        navigate("/student/attempt-locked");
-        return;
-      }*/
-
+      
       navigate(`/student/instructions/${enterResData.exam_id}`);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Unable to enter exam");

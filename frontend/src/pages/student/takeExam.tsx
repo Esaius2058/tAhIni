@@ -8,9 +8,9 @@ import QuestionRenderer from "@/components/student/QuestionRenderer";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Question } from "@/types/question";
+import { toast } from "sonner";
 
 export default function TakeExamPage() {
-  const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -21,23 +21,28 @@ export default function TakeExamPage() {
   useEffect(() => {
     async function bootstrap() {
       try {
-        const questionsData = await getSessionQuestions(sessionId!);
-
-        const data = await getCandidateExamSession();
-        setSession(data.session);
+        const sessionData = await getCandidateExamSession();
+        const questionsData = await getSessionQuestions();
+        setSession(sessionData);
         setQuestions(questionsData);
         setLoading(false);
       } catch {
-        navigate("/student/login");
+        toast.error("Error resolving exam session details");
+        const timerId = setTimeout(() => {
+          navigate(`exams/${ sessionStorage.getItem("examId")}/start`);
+        }, 3000);
+
+        return () => {
+          clearTimeout(timerId);
+        };
       }
     }
 
     bootstrap();
-  }, [sessionId]);
+  }, []);
 
   const handleSubmit = async () => {
-    await submitExam(sessionId!);
-    navigate("/student/submitted");
+    navigate(`/exams/${sessionStorage.getItem("examID")}/submit`);
   };
 
   if (loading) return <Spinner />;
@@ -49,12 +54,13 @@ export default function TakeExamPage() {
       <Timer
         endsAt={session.ends_at}
         onTimeUp={async () => {
-          await submitExam(session.id);
-          navigate("/student/exam-submitted");
+          await submitExam();
+          const examId = sessionStorage.getItem("examId");
+          navigate(`/exams/${examId}/submit`);
         }}
       />
 
-      <QuestionRenderer question={currentQuestion} sessionId={sessionId!} />
+      <QuestionRenderer question={currentQuestion} sessionId={sessionStorage.getItem("sessionId")} />
 
       <div className="navigation-controls">
         <button
