@@ -1,8 +1,10 @@
 // components/exam/QuestionRenderer.tsx
 import MCQQuestion from "../question/MCQQuestion";
 import NumericalQuestion from "../question/Numerical";
+import { ShortAnswerQuestion } from "../question/ShortAnswerQuestion";
 import MultiResponseQuestion from "../question/MultiResponse";
 import TrueFalseQuestion from "../question/TrueFalse";
+import { CodeQuestion } from "../question/CodeQuestion";
 import TextQuestion from "../question/TextQuestion";
 import FileUploadQuestion from "../question/FileUploadQuestion";
 import { Question } from "@/types/question";
@@ -34,13 +36,6 @@ export default function QuestionRenderer({
 
     case "file_upload":
       return <FileUploadQuestion question={question} sessionId={sessionId} />;
-      {
-        /*<FileUploadAnswer
-          sessionId={sessionId}
-          questionId={question.id}
-          constraints={question.constraints}
-        />*/
-      }
 
     case "short_answer":
       return <ShortAnswerQuestion question={question} sessionId={sessionId} />;
