@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "./ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "../auth/useAuth";
-import { toast } from "sonner"
+import { toast } from "sonner";
+import { ExamProvider } from "../context/ExamContext"; 
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -33,7 +33,16 @@ export default function Layout() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          {/* 2. Wrap the Outlet. Now every page inside Outlet can use useExams() */}
+          {/* Ensure user.id exists before passing it, or handle null inside the provider */}
+          {user?.id && (
+            <ExamProvider instructorId={user.id}>
+               <Outlet />
+            </ExamProvider>
+          )}
+          
+          {/* Fallback if user is loading/undefined (optional) */}
+          {!user?.id && <Outlet />}
         </main>
       </div>
     </SidebarProvider>

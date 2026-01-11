@@ -3,25 +3,29 @@ export type QuestionType = "mcq" | "essay" | "file_upload" | "code" | "numerical
 export interface Answer {
   id: string;
   text: string;
-  is_correct?: boolean;
+  is_correct: boolean; // Required
+}
+
+export interface AnswerOption {
+  id: string;
+  text: string;
+  is_correct: boolean;
+}
+
+export interface AnswerContainer {
+  id?: string;
+  explanation?: string;
+  options: AnswerOption[];
 }
 
 export interface Question {
-  id: string;
+  id: string; 
   type: QuestionType;
   text: string;
-  options?: string[];
-  constraints?: {
-    allowedFileTypes?: string[];
-    maxSizeMB?: number;
-  };
-  lockdownProfile: "strict" | "relaxed";
+  answer?: AnswerContainer;
   difficulty?: string;
   tags?: string[];
-  embedding?: number[]; 
   exam_id?: string;
-
-  answers: Answer[];
 }
 
 export interface QuestionBase {

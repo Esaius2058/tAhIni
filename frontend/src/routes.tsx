@@ -13,6 +13,7 @@ import TakeExamPage from "./pages/student/takeExam";
 import SubmitExamPage from "./pages/student/submitExam";
 import ExamCompletedPage from "./pages/student/completeExam";
 import LockedAttempt from "./pages/student/lockedAttempt";
+import AuthPage from "./pages/Auth";
 
 const MainRoutes = () => {
   const routes = [
@@ -26,11 +27,15 @@ const MainRoutes = () => {
         },
         {
           path: "login",
-          element: <Landing />,
+          element: <AuthPage />,
         },
         {
           path: "signup",
-          element: <Landing />,
+          element: <AuthPage />,
+        },
+        {
+          path: "exams/enter",
+          element: <CandidateLogin />,
         },
         {
           element: <ProtectedRoute />,
@@ -70,14 +75,14 @@ const MainRoutes = () => {
                   path: "start",
                   element: <CandidateLogin />, // name + examCode
                 },
-                {
+                /*{
                   path: "start/student",
                   element: (
                     <ProtectedRoute>
                       <StudentExamEntry /> // no name, user already known
                     </ProtectedRoute>
                   ),
-                },
+                },*/
                 // SHARED FLOW
                 {
                   path: "instructions",
@@ -98,7 +103,7 @@ const MainRoutes = () => {
                 {
                   path: "locked",
                   element: <LockedAttempt />,
-                }
+                },
               ],
             },
           ],

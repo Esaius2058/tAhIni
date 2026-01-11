@@ -1,4 +1,4 @@
-import { uploadAnswerFile } from "@/api/candidateExam";
+/*import { uploadAnswerFile } from "@/api/candidateExam";
 import { Question } from "@/types/question";
 
 interface Props {
@@ -23,3 +23,4 @@ export default function FileUploadQuestion({ question, sessionId }: Props) {
     </div>
   );
 }
+*/

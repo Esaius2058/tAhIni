@@ -8,7 +8,7 @@ export default function SingleExamPage() {
   const [exam, setExam] = useState<ExamRead | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { id } = useParams<{ id: string }>(); 
+  const { id } = useParams<{ id: string }>();
 
   useEffect(() => {
     const load = async () => {
@@ -35,11 +35,17 @@ export default function SingleExamPage() {
       </p>
 
       <div className="p-4">
-        <p className="text-gray-700">{exam.course.name} ({exam.course.code})</p>
+        <p className="text-gray-700">
+          {exam.course.name} ({exam.course.code})
+        </p>
+        <p className="text-gray-700">Exam Code: {exam.exam_code}</p>
         <p className="text-gray-700">Instructor: {exam.author.name}</p>
         <p className="text-gray-700">Passmark: {exam.pass_mark}</p>
         <p className="text-gray-700">Duration: {exam.duration}</p>
+        <p className="text-gray-700">
+          Questions: {exam.questions ? exam.questions.length : 0}
+        </p>
       </div>
     </div>
-  )
-};
+  );
+}

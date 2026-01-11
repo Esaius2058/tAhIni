@@ -2,56 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/**:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  // Brand Core
-  --color-primary: #d32f2f;
-  --color-primary-dark: #9a0007;
-  --color-primary-light: #ff6659;
-
-  // Neutrals
-  --text-primary: #1e1e1e;
-  --text-secondary: #4a4a4a;
-  --border: #e0e0e0;
-  --card-bg: #fafafa;
-  --app-bg: #f5f5f5;
-
-  // Utility Dark Tones
-  --dark-base: #212121;
-  --dark-surface: #2e2e2e;
-
-  // Supporting Accents
-  --accent-gold: #ffc107;
-  --accent-cyan: #00bcd4;
-  --accent-indigo: #283593;
-
-  // CTA Buttons
-  --btn-primary-bg: #b71c1c;
-  --btn-primary-hover: #d32f2f;
-  --btn-primary-text: #ffffff;
-
-  // Light Mode
-  --light-bg: #ffffff;
-  --light-surface: #fafafa;
-
-  // Dark Mode
-  --dark-bg: #121212;
-  --dark-surface-alt: #1e1e1e;
-  --primary-on-dark: #ff6659;
-
-  color-scheme: light dark;
-  color: #1e1e1e;
-  background-color: var(--app-bg);
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}*/
-
 @layer base {
   :root {
     --radius: 0.625rem;
@@ -89,9 +39,50 @@
     --color-primary: #d32f2f;
     --color-primary-dark: #9a0007;
     --color-primary-light: #ff6659;
+
+    /* --- New Custom Brand Scheme --- */
+
+    /* Brand Core - Updated with the specific red from the image */
+    --color-primary: #CA0F15;
+    --color-primary-dark: #9a0007;
+    --color-primary-light: #EC1C1B;
+
+    /* Custom Neutrals */
+    --text-primary: #1e1e1e;
+    --text-secondary: #4a4a4a;
+    /* Note: --border is already defined by shadcn above, so we skip redefining it here */
+    --card-bg: #ffffff;
+    --app-bg: #f5f5f5;
+
+    /* Utility Dark Tones */
+    --dark-base: #121212;
+    --dark-surface: #1e1e1e;
+
+    /* Supporting Accents */
+    --accent-gold: #ffc107;
+    --accent-cyan: #00bcd4;
+    --accent-indigo: #283593;
+
+    /* CTA Buttons mapping */
+    --btn-primary-bg: var(--color-primary);
+    --btn-primary-hover: var(--color-primary-dark);
+    --btn-primary-text: #ffffff;
+
+    /* Dark Mode specific overrides for custom vars */
+    --primary-on-dark: var(--color-primary-light);
+
+    /* Base Root Styles */
+    color-scheme: light dark;
+    /* Ensure the app uses the custom background variable if shadcn's isn't being used explicitly */
+    background-color: var(--background); /* Using shadcn's background by default to avoid conflict */
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  .dark {
+  /*.dark {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
@@ -123,31 +114,36 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.439 0 0);
-  }
+  }*/
 }
 
 button {
+  display: flex;            /* Enables flexbox layout */
+  justify-content: center;  /* Centers horizontally */
+  align-items: center;
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: var(--color-primary);
+  background-color: var(--btn-primary-bg);
   cursor: pointer;
   color: #ffffff;
   transition: border-color 0.25s;
 }
 button:hover {
   transition: 50ms;
-  background-color: var(--color-primary-dark);
+  background-color: var(--btn-primary-hover);
   color: #ffffff;
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
-
+textarea, select, option {
+  border: 1px solid #ccc;
+}
 @layer base {
   * {
     @apply border-border;
@@ -156,26 +152,3 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
-/*
-a {
-  font-weight: 500;
-  color: var(--accent-indigo);
-  text-decoration: inherit;
-}
-a:hover {
-  color: var(--accent-cyan);
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-*/

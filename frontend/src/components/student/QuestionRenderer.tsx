@@ -6,7 +6,6 @@ import MultiResponseQuestion from "../question/MultiResponse";
 import TrueFalseQuestion from "../question/TrueFalse";
 import { CodeQuestion } from "../question/CodeQuestion";
 import TextQuestion from "../question/TextQuestion";
-import FileUploadQuestion from "../question/FileUploadQuestion";
 import { Question } from "@/types/question";
 
 interface QuestionRendererProps {
@@ -33,9 +32,6 @@ export default function QuestionRenderer({
 
     case "essay":
       return <TextQuestion question={question} sessionId={sessionId} />;
-
-    case "file_upload":
-      return <FileUploadQuestion question={question} sessionId={sessionId} />;
 
     case "short_answer":
       return <ShortAnswerQuestion question={question} sessionId={sessionId} />;

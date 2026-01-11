@@ -4,38 +4,49 @@ import { toast } from "sonner";
 import { useAuth } from "../../auth/AuthContext";
 import { createExamApi } from "../../api/exam";
 import { ExamCreate } from "../../types/exam";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function NewExamPage() {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [course, setCourse] = useState("");
   const [semester, setSemester] = useState("");
-  const [duration, setDuration] = useState("");
-  const [passmark, setPassmark] = useState(40)
+  const [duration, setDuration] = useState(0);
+  const [passmark, setPassmark] = useState(40);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { user } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const examData: ExamCreate = {
-      title,
-      subject,
-      author_id: user ? user.id : "author",
-      course_id: course,
-      pass_mark: passmark,
-      semester_id: semester,
-      duration: duration,
-    };
+    try {
+      setIsSubmitting(true);
+      const examData: ExamCreate = {
+        title,
+        subject,
+        author_id: user ? user.id : "author",
+        course_id: course,
+        pass_mark: passmark,
+        semester_id: semester,
+        duration: duration,
+      };
 
-    const exam = await createExamApi(examData);
-    return exam ? toast.success("Exam created successfully") : toast.error("Error creating exam");
+      const exam = await createExamApi(examData);
+      toast.success("Exam created successfully");
+      return exam
+    } catch(error) {
+      console.error("Error saving question:", error);
+      toast.error("Error creating exam");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center">
       <h1 className="text-2xl font-bold mb-6">Create New Exam</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-7 max-w-md">
+      <form onSubmit={handleSubmit} className="space-y-7 max-w-md form-card">
         <div className="flex flex-col gap-5">
           <div>
             <label className="block text-sm font-medium">Exam Title</label>
@@ -93,7 +104,7 @@ export default function NewExamPage() {
               type="text"
               className="mt-1 md:w-[400px] border px-3 py-2 rounded"
               value={duration}
-              onChange={(e) => setDuration(e.target.value)}
+              onChange={(e) => setDuration(Number(e.target.value))}
               required
             />
           </div>
@@ -102,7 +113,7 @@ export default function NewExamPage() {
           type="submit"
           className="px-4 py-2 w-[180px] rounded text-white"
         >
-          Create
+          {isSubmitting ? <Spinner/> + "Creating..." : "Create"}
         </button>
       </form>
     </div>

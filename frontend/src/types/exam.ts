@@ -1,16 +1,19 @@
+import { QuestionRead } from "./question";
+
 export interface ExamBase {
   title: string;
   subject: string;
   author_id: string; 
   course_id: string;
   semester_id: string;
-  duration: string; 
+  duration: number; 
   pass_mark: number; 
 }
 export interface ExamCreate extends ExamBase {}
  
 export interface ExamRead extends ExamBase {
   id: string;
+  exam_code: string;
   created_at: string; 
   updated_at: string; 
   course: {
@@ -20,6 +23,7 @@ export interface ExamRead extends ExamBase {
   author: {
     name: string;
   };
+  questions: QuestionRead[];
 }
 
 export interface ExamUpdate {

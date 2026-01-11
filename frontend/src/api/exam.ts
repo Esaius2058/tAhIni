@@ -7,7 +7,7 @@ import {
   ExamStatsRead,
   ExamResultsRead,
 } from "../types/exam";
-import { QuestionRead } from "../types/question";
+import { Question, QuestionRead } from "../types/question";
 
 export const createExamApi = async (data: ExamCreate) => {
   try {
@@ -77,11 +77,15 @@ export const getQuestionInExamApi = async (examId: string, questionId: string) =
   }
 };
 
-export const addQuestionToExamApi = async (examId: string, questionId: string) => {
+export const addQuestionToExamApi = async (examId: string, questionData: Question): Promise<Question> => {
   try {
-    await api.post(`/exam/${examId}/questions/${questionId}`);
+    const response = await api.post<Question>(
+      `/exam/${examId}/question/add`, // Matches your backend route
+      questionData
+    );
+    return response.data
   } catch (error) {
-    console.error("Add question error:", error);
+    console.error("Failed to add question to exam:", error);
     throw error;
   }
 };
